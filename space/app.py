@@ -43,12 +43,13 @@ _CACHED_RESULT = {}
 def predict_and_format(file_obj, output_formats: list[str]):
     """Run FACET on an uploaded shift list file."""
     if file_obj is None:
-        raise gr.Error("Please upload a shift list file (.tab or .csv)")
+        raise gr.Error("Please upload a shift list file (.tab, .csv, .nef, .str)")
 
     from facet import predict
     from facet.io.writers import (
         write_tbl, write_aco, write_nef, write_predtab, write_csv, write_json,
     )
+    from facet.visualization import plot_sequence_ss
 
     input_path = file_obj if isinstance(file_obj, str) else file_obj.name
     logger.info("Predicting from %s", input_path)
@@ -60,6 +61,18 @@ def predict_and_format(file_obj, output_formats: list[str]):
 
     n_accepted = len(result.accepted())
     summary_text = result.summary()
+
+    # Publication-grade sequence + SS figure
+    seq_ss_path = os.path.join(tempfile.gettempdir(), "facet_sequence_ss.png")
+    try:
+        fig_seq = plot_sequence_ss(
+            result, seq_ss_path,
+            title=f"FACET prediction — {Path(input_path).stem}",
+        )
+        plt.close(fig_seq)
+    except Exception as e:
+        logger.warning("Sequence figure failed: %s", e)
+        seq_ss_path = None
 
     # Ramachandran plot
     fig = _plot_ramachandran(result)
@@ -92,7 +105,7 @@ def predict_and_format(file_obj, output_formats: list[str]):
             writer(result, out_path)
         output_files.append(out_path)
 
-    return summary_text, rama_path, output_files
+    return summary_text, seq_ss_path, rama_path, output_files
 
 
 def _plot_ramachandran(result):
@@ -164,6 +177,7 @@ demo = gr.Interface(
     ],
     outputs=[
         gr.Textbox(label="Summary", lines=20),
+        gr.Image(label="Sequence + Secondary Structure"),
         gr.Image(label="Ramachandran Plot"),
         gr.Files(label="Download restraint files"),
     ],

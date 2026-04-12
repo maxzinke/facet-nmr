@@ -22,10 +22,18 @@ __version__ = "0.1.0"
 from .inference import predict
 from .io.formats import FACETResult, ResiduePrediction, ShiftList
 
+
+def plot_sequence_ss(*args, **kwargs):
+    """Lazy import wrapper — matplotlib is an optional dependency."""
+    from .visualization import plot_sequence_ss as _impl
+    return _impl(*args, **kwargs)
+
+
 __all__ = [
     "__version__",
     "predict",
     "FACETResult",
     "ResiduePrediction",
     "ShiftList",
+    "plot_sequence_ss",
 ]

@@ -51,6 +51,8 @@ def main(argv: list[str] | None = None) -> None:
     pred.add_argument("--device", default=None, help="cuda / cpu")
     pred.add_argument("--include-all", action="store_true",
                       help="Include all residues in restraint files (not just accepted)")
+    pred.add_argument("--plot", action="store_true",
+                      help="Also write a publication-grade sequence + SS figure (.png)")
     pred.add_argument("-v", "--verbose", action="store_true")
 
     args = parser.parse_args(argv)
@@ -143,6 +145,18 @@ def _cmd_predict(args) -> None:
             elif fmt == "json":
                 write_json(result, out)
             logger.info("Wrote %s", out)
+
+    # Publication-grade figure
+    if args.plot:
+        try:
+            from .visualization import plot_sequence_ss
+            plot_path = out_dir / f"{stem}_facet_ss.png"
+            plot_sequence_ss(result, plot_path)
+            logger.info("Wrote %s", plot_path)
+        except ImportError:
+            logger.warning("--plot requires matplotlib (install: pip install facet-nmr[plot])")
+        except Exception as e:
+            logger.warning("Plot failed: %s", e)
 
     # Print summary to stdout
     print(result.summary())

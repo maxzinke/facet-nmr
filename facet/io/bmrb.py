@@ -74,11 +74,16 @@ def fetch_bmrb(
             f"BMRB entry {entry_id} has no assigned chemical shift data"
         )
 
-    # Build residues keyed by (entity_id, seq_id)
-    by_key: dict[tuple[str, int], Residue] = {}
+    # Group by entity (multi-chain complexes); pick the largest afterward
+    by_entity: dict[str, dict[int, Residue]] = {}
     for row in shift_rows:
+        seq_raw = row.get("Seq_ID") or row.get("Comp_index_ID") or "0"
+        # Strip insertion codes
+        seq_digits = "".join(c for c in str(seq_raw) if c.isdigit() or c == "-")
+        if not seq_digits:
+            continue
         try:
-            seq_id = int(row.get("Seq_ID") or row.get("Comp_index_ID") or 0)
+            seq_id = int(seq_digits)
         except (ValueError, TypeError):
             continue
         if seq_id == 0:
@@ -87,7 +92,7 @@ def fetch_bmrb(
         comp_id = (row.get("Comp_ID") or "UNK").upper()
         atom_id = row.get("Atom_ID") or ""
         val_str = row.get("Val") or row.get("Value")
-        entity = row.get("Entity_assembly_ID") or row.get("Entity_ID") or "1"
+        entity = str(row.get("Entity_assembly_ID") or row.get("Entity_ID") or "1")
 
         try:
             value = float(val_str) if val_str is not None else None
@@ -100,14 +105,26 @@ def fetch_bmrb(
         if nuc is None or nuc not in BACKBONE_NUCLEI:
             continue
 
-        key = (str(entity), seq_id)
-        if key not in by_key:
-            by_key[key] = Residue(seq_id=seq_id, comp_id=comp_id)
-        by_key[key].shifts[nuc] = value
+        if entity not in by_entity:
+            by_entity[entity] = {}
+        if seq_id not in by_entity[entity]:
+            by_entity[entity][seq_id] = Residue(seq_id=seq_id, comp_id=comp_id)
+        by_entity[entity][seq_id].shifts[nuc] = value
 
-    if not by_key:
+    if not by_entity:
         raise ValueError(
             f"BMRB entry {entry_id}: no backbone nuclei found in shift list"
+        )
+
+    # Pick largest entity
+    best = max(by_entity.keys(), key=lambda e: len(by_entity[e]))
+    by_key = by_entity[best]
+    if len(by_entity) > 1:
+        import logging
+        sizes = {e: len(r) for e, r in by_entity.items()}
+        logging.getLogger("facet").warning(
+            "BMRB %s has %d entities %s — using entity %s (%d residues)",
+            entry_id, len(by_entity), sizes, best, len(by_key),
         )
 
     residues = [by_key[k] for k in sorted(by_key)]

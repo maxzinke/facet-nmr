@@ -37,6 +37,37 @@ class TestRandomCoil:
         assert np.all(sec == 0.0)
 
 
+class TestHardening:
+    """Tests for the hardened input-validation pipeline."""
+
+    def test_shift_sanity_rejects_miscalibrated(self):
+        """Shifts wildly outside physical range should be rejected."""
+        from facet import predict
+        from facet.io.formats import Residue, ShiftList
+
+        # CA at 155 ppm (should be 40-75) — simulates a 13C/15N mix-up
+        residues = [
+            Residue(i + 1, "ALA", {
+                "H": 8.0, "HA": 4.0, "N": 120.0,
+                "CA": 155.0, "CB": 19.0, "C": 177.0,
+            })
+            for i in range(5)
+        ]
+        sl = ShiftList(residues=residues)
+        with pytest.raises(ValueError, match="physical range"):
+            predict(sl, checkpoint="does-not-exist.pt")
+
+    def test_too_few_residues(self):
+        from facet import predict
+        from facet.io.formats import Residue, ShiftList
+        sl = ShiftList(residues=[
+            Residue(1, "ALA", {"CA": 52.5}),
+            Residue(2, "ALA", {"CA": 52.5}),
+        ])
+        with pytest.raises(ValueError, match="Too few residues"):
+            predict(sl, checkpoint="does-not-exist.pt")
+
+
 class TestValidation:
     """Input validation in predict() — non-canonical AAs, missing heavy atoms."""
 

@@ -164,12 +164,18 @@ def read_nmrstar(path: str | Path) -> ShiftList:
     if not rows:
         return ShiftList(residues=[], source=str(path))
 
-    # Build residues keyed by (Entity_assembly_ID, Seq_ID)
-    by_key: dict[tuple[str, int], Residue] = {}
+    # Group by entity first (multi-chain depositions are common for complexes).
+    # Each entity gets its own dict of residues; we pick the largest afterward.
+    by_entity: dict[str, dict[int, Residue]] = {}
+
     for row in rows:
-        seq_id_str = row.get("Seq_ID") or row.get("Comp_index_ID") or ""
+        seq_id_raw = row.get("Seq_ID") or row.get("Comp_index_ID") or ""
+        # Handle insertion codes ("10A") by stripping non-digits
+        seq_digits = "".join(c for c in str(seq_id_raw) if c.isdigit() or c == "-")
+        if not seq_digits:
+            continue
         try:
-            seq_id = int(seq_id_str)
+            seq_id = int(seq_digits)
         except (ValueError, TypeError):
             continue
 
@@ -187,10 +193,30 @@ def read_nmrstar(path: str | Path) -> ShiftList:
         if nuc is None or nuc not in BACKBONE_NUCLEI:
             continue
 
-        key = (str(entity), seq_id)
-        if key not in by_key:
-            by_key[key] = Residue(seq_id=seq_id, comp_id=comp_id)
-        by_key[key].shifts[nuc] = value
+        entity_str = str(entity)
+        if entity_str not in by_entity:
+            by_entity[entity_str] = {}
+        if seq_id not in by_entity[entity_str]:
+            by_entity[entity_str][seq_id] = Residue(seq_id=seq_id, comp_id=comp_id)
+        by_entity[entity_str][seq_id].shifts[nuc] = value
+
+    if not by_entity:
+        return ShiftList(residues=[], source=str(path))
+
+    # Pick the largest entity (most residues). Multi-chain BMRB files typically
+    # list each chain under a separate Entity_assembly_ID. Taking the largest
+    # handles both homodimers (identical chains) and heterocomplexes (pick the
+    # main chain; others will be silently dropped).
+    best_entity = max(by_entity.keys(), key=lambda e: len(by_entity[e]))
+    by_key = by_entity[best_entity]
+
+    if len(by_entity) > 1:
+        import logging
+        sizes = {e: len(r) for e, r in by_entity.items()}
+        logging.getLogger("facet").warning(
+            "NMR-STAR file has %d entities %s — using entity %s (%d residues)",
+            len(by_entity), sizes, best_entity, len(by_key),
+        )
 
     residues = [by_key[k] for k in sorted(by_key)]
     return ShiftList(residues=residues, source=str(path))

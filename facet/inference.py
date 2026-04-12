@@ -9,10 +9,28 @@ Public API::
 from __future__ import annotations
 
 import math
+from functools import lru_cache
 from pathlib import Path
 
 import numpy as np
 import torch
+
+
+# Physical ranges for backbone chemical shifts (in ppm)
+# Used for sanity-checking input data — shifts far outside these ranges
+# almost always indicate a units error, referencing problem, or the wrong
+# nucleus being labeled as one of ours.
+# Sources: Wishart random-coil tables + BMRB statistics (mean ± ~8σ)
+_SHIFT_RANGE = {
+    "H":  (5.0, 12.0),     # amide 1H
+    "HA": (1.5, 6.5),      # alpha 1H
+    "N":  (95.0, 140.0),   # backbone 15N
+    "CA": (40.0, 75.0),    # alpha 13C
+    "CB": (15.0, 80.0),    # beta 13C (wide: CB of T/S is 60-70)
+    "C":  (168.0, 185.0),  # carbonyl 13C
+}
+
+_MIN_RESIDUES = 3  # need at least 3 residues for a pentapeptide center + neighbors
 
 from .io.formats import (
     BACKBONE_NUCLEI,
@@ -25,7 +43,6 @@ from .io.formats import (
     ResiduePrediction,
     ShiftList,
 )
-from .model import FACETv3, FACETv3Config
 from .random_coil import to_secondary_shifts
 
 # AA 3-letter → index (1-20, 0=pad)
@@ -161,6 +178,21 @@ def _build_windows(
     return windows
 
 
+@lru_cache(maxsize=4)
+def _load_cached_model(checkpoint_path: str, device_str: str):
+    """Load a FACETv3 checkpoint. Cached per (path, device) so repeated
+    predict() calls in the same process don't re-read the weights file."""
+    from .model import FACETv3, FACETv3Config
+    dev = torch.device(device_str)
+    config = FACETv3Config()
+    model = FACETv3(config).to(dev)
+    state = torch.load(checkpoint_path, map_location=dev, weights_only=True)
+    # strict=False: checkpoint may predate the chi1 head addition
+    model.load_state_dict(state, strict=False)
+    model.eval()
+    return model
+
+
 def _find_checkpoint() -> Path:
     """Locate the bundled model weights."""
     import os
@@ -211,6 +243,44 @@ def predict(
         shift_list = read_auto(input_)
 
     shifts, masks, comp_ids, seq_ids = shift_list.to_arrays()
+
+    # ── Minimum size ──
+    if len(comp_ids) < _MIN_RESIDUES:
+        raise ValueError(
+            f"Too few residues ({len(comp_ids)}). FACET needs at least "
+            f"{_MIN_RESIDUES} residues to form a pentapeptide window."
+        )
+
+    # ── Shift range sanity check ──
+    # Detect obviously miscalibrated data (e.g. 13C shifts where 15N should be)
+    n_out_of_range = 0
+    out_of_range_nuclei: dict[str, int] = {}
+    for i in range(len(comp_ids)):
+        for j, nuc in enumerate(BACKBONE_NUCLEI):
+            if masks[i, j] < 0.5:
+                continue
+            val = float(shifts[i, j])
+            lo, hi = _SHIFT_RANGE[nuc]
+            if val < lo or val > hi:
+                n_out_of_range += 1
+                out_of_range_nuclei[nuc] = out_of_range_nuclei.get(nuc, 0) + 1
+
+    total_observed = int(masks.sum())
+    if total_observed > 0 and n_out_of_range / total_observed > 0.1:
+        # More than 10% of shifts are wildly off — probably a units issue
+        detail = ", ".join(f"{nuc}={n}" for nuc, n in sorted(out_of_range_nuclei.items()))
+        raise ValueError(
+            f"{n_out_of_range}/{total_observed} ({100*n_out_of_range/total_observed:.0f}%) "
+            f"of chemical shifts are outside physical ranges ({detail}). "
+            f"This usually indicates a referencing error, wrong nucleus labels, "
+            f"or a non-protein sample. Expected ranges (ppm): "
+            f"H=5-12, HA=1.5-6.5, N=95-140, CA=40-75, CB=15-80, C=168-185."
+        )
+    elif n_out_of_range > 0:
+        logger.warning(
+            "%d individual shifts outside typical ranges (%s) — likely outliers",
+            n_out_of_range, ", ".join(f"{k}={v}" for k, v in out_of_range_nuclei.items()),
+        )
 
     # ── Validate AA composition ──
     unknown_aas = [c for c in comp_ids if c not in CANONICAL_AA]
@@ -271,14 +341,10 @@ def predict(
 
     if checkpoint is None:
         checkpoint = _find_checkpoint()
-    checkpoint = Path(checkpoint)
+    checkpoint = Path(checkpoint).resolve()
 
-    config = FACETv3Config()
-    model = FACETv3(config).to(dev)
-    state = torch.load(checkpoint, map_location=dev, weights_only=True)
-    # strict=False: checkpoint may predate chi1 head addition
-    model.load_state_dict(state, strict=False)
-    model.eval()
+    # LRU-cached load — reuses the same model across successive predict() calls
+    model = _load_cached_model(str(checkpoint), device)
 
     # Batch inference
     n = len(windows)

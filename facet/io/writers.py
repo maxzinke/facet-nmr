@@ -44,32 +44,49 @@ def write_tbl(
 
     The four atoms define the dihedral: C(i-1)-N(i)-CA(i)-C(i) for phi,
     N(i)-CA(i)-C(i)-N(i+1) for psi. Error bounds from FACET confidence.
+
+    Terminal residues are handled correctly: PHI omitted when residue
+    (i-1) is not in the shift list (N-terminus or gap), PSI omitted when
+    residue (i+1) is not in the shift list (C-terminus or gap).
     """
     out = Path(path).resolve()
     out.parent.mkdir(parents=True, exist_ok=True)
 
     residues = result.accepted() if accepted_only else result.residues
+    present_sids = {r.seq_id for r in result.residues}
 
     lines = [f"! FACET dihedral restraints — {len(residues)} residues\n"]
+    n_phi_skip = 0
+    n_psi_skip = 0
 
     for r in residues:
         sid = r.seq_id
-        # PHI: C(i-1) - N(i) - CA(i) - C(i)
-        lines.append(
-            f"assign (resid {sid - 1} and name C)  (resid {sid} and name N)\n"
-            f"       (resid {sid} and name CA) (resid {sid} and name C)"
-            f"  1.0 {r.phi:7.1f} {r.phi_err:5.1f}"
-        )
-        lines.append(f"! PHI {sid} {r.comp_id} ({r.confidence_class})")
 
-        # PSI: N(i) - CA(i) - C(i) - N(i+1)
-        lines.append(
-            f"assign (resid {sid} and name N)  (resid {sid} and name CA)\n"
-            f"       (resid {sid} and name C)  (resid {sid + 1} and name N)"
-            f"  1.0 {r.psi:7.1f} {r.psi_err:5.1f}"
-        )
-        lines.append(f"! PSI {sid} {r.comp_id} ({r.confidence_class})")
+        # PHI: C(i-1) - N(i) - CA(i) - C(i)  — needs (i-1) present
+        if (sid - 1) in present_sids:
+            lines.append(
+                f"assign (resid {sid - 1} and name C)  (resid {sid} and name N)\n"
+                f"       (resid {sid} and name CA) (resid {sid} and name C)"
+                f"  1.0 {r.phi:7.1f} {r.phi_err:5.1f}"
+            )
+            lines.append(f"! PHI {sid} {r.comp_id} ({r.confidence_class})")
+        else:
+            n_phi_skip += 1
+
+        # PSI: N(i) - CA(i) - C(i) - N(i+1)  — needs (i+1) present
+        if (sid + 1) in present_sids:
+            lines.append(
+                f"assign (resid {sid} and name N)  (resid {sid} and name CA)\n"
+                f"       (resid {sid} and name C)  (resid {sid + 1} and name N)"
+                f"  1.0 {r.psi:7.1f} {r.psi_err:5.1f}"
+            )
+            lines.append(f"! PSI {sid} {r.comp_id} ({r.confidence_class})")
+        else:
+            n_psi_skip += 1
         lines.append("")
+
+    if n_phi_skip or n_psi_skip:
+        lines.append(f"! Skipped terminal/gap: {n_phi_skip} PHI, {n_psi_skip} PSI")
 
     out.write_text("\n".join(lines), encoding="utf-8")
     return out
@@ -135,6 +152,7 @@ def write_nef(
     out.parent.mkdir(parents=True, exist_ok=True)
 
     residues = result.accepted() if accepted_only else result.residues
+    present_sids = {r.seq_id for r in result.residues}
 
     lines: list[str] = []
 
@@ -190,31 +208,33 @@ def write_nef(
         sid = r.seq_id
         cc = chain_code
 
-        # PHI: C(i-1) - N(i) - CA(i) - C(i)
-        phi_lo = r.phi - r.phi_err
-        phi_hi = r.phi + r.phi_err
-        lines.append(
-            f"      {idx} {restraint_id} . "
-            f"{cc} {sid - 1} . C "
-            f"{cc} {sid} {r.comp_id} N "
-            f"{cc} {sid} {r.comp_id} CA "
-            f"{cc} {sid} {r.comp_id} C "
-            f"PHI {r.phi:.1f} {phi_lo:.1f} {phi_hi:.1f}"
-        )
-        idx += 1
+        # PHI: C(i-1) - N(i) - CA(i) - C(i) — skip if (i-1) missing
+        if (sid - 1) in present_sids:
+            phi_lo = r.phi - r.phi_err
+            phi_hi = r.phi + r.phi_err
+            lines.append(
+                f"      {idx} {restraint_id} . "
+                f"{cc} {sid - 1} . C "
+                f"{cc} {sid} {r.comp_id} N "
+                f"{cc} {sid} {r.comp_id} CA "
+                f"{cc} {sid} {r.comp_id} C "
+                f"PHI {r.phi:.1f} {phi_lo:.1f} {phi_hi:.1f}"
+            )
+            idx += 1
 
-        # PSI: N(i) - CA(i) - C(i) - N(i+1)
-        psi_lo = r.psi - r.psi_err
-        psi_hi = r.psi + r.psi_err
-        lines.append(
-            f"      {idx} {restraint_id} . "
-            f"{cc} {sid} {r.comp_id} N "
-            f"{cc} {sid} {r.comp_id} CA "
-            f"{cc} {sid} {r.comp_id} C "
-            f"{cc} {sid + 1} . N "
-            f"PSI {r.psi:.1f} {psi_lo:.1f} {psi_hi:.1f}"
-        )
-        idx += 1
+        # PSI: N(i) - CA(i) - C(i) - N(i+1) — skip if (i+1) missing
+        if (sid + 1) in present_sids:
+            psi_lo = r.psi - r.psi_err
+            psi_hi = r.psi + r.psi_err
+            lines.append(
+                f"      {idx} {restraint_id} . "
+                f"{cc} {sid} {r.comp_id} N "
+                f"{cc} {sid} {r.comp_id} CA "
+                f"{cc} {sid} {r.comp_id} C "
+                f"{cc} {sid + 1} . N "
+                f"PSI {r.psi:.1f} {psi_lo:.1f} {psi_hi:.1f}"
+            )
+            idx += 1
         restraint_id += 1
 
     lines.append("")

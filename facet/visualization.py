@@ -1,10 +1,24 @@
 """Publication-grade figures for FACET predictions.
 
-Reproduces the sequence-with-SS-cartoon layout commonly used in NMR
-publications: amino-acid sequence in rows, secondary-structure elements
-(beta arrows, alpha cylinders) underneath, labeled β1..βN / α1..αN.
+Produces a clean sequence + secondary-structure cartoon in the style of
+NMR/structural biology publications (see e.g., Brown et al., Angew. Chem.
+Int. Ed. 2017). Design principles:
 
-Requires matplotlib (optional dependency; install via ``facet-nmr[plot]``).
+  - One semantic axis per visual channel:
+      * Bar height   = continuous confidence (not class)
+      * Bar color    = single neutral (charcoal)
+      * Dashed line  = "Strong" threshold reference
+      * SS shape     = helix cylinder vs strand arrow (convention)
+      * SS color     = red helix / navy strand (convention)
+      * Dynamic residues = absence of bar + gray tick marker
+
+  - Strict vertical layering (no overlap zones between sequence,
+    numbering, SS cartoon, and element labels).
+
+  - DSSP-like SS smoothing: α-helix ≥4 consecutive H, β-strand ≥2
+    consecutive E. Shorter runs are treated as coil.
+
+Requires matplotlib (install via ``facet-nmr[plot]``).
 """
 from __future__ import annotations
 
@@ -14,24 +28,60 @@ from pathlib import Path
 from .io.formats import AA_THREE_TO_ONE, FACETResult, ResiduePrediction
 
 
-# Colors (publication palette)
-COLOR_HELIX = "#C0392B"      # red — alpha helix
-COLOR_STRAND = "#2C3E50"     # dark blue/gray — beta strand
-COLOR_COIL = "#95A5A6"       # neutral gray — coil/loop
-COLOR_STRONG = "#27AE60"     # green — high-confidence
-COLOR_GOOD = "#3498DB"       # blue — moderate
-COLOR_WARN = "#E67E22"       # orange — caution
-COLOR_DYNAMIC = "#95A5A6"    # gray — low confidence
+# ─────────────────────────── Style ───────────────────────────
 
+# Single palette — minimal colors to keep publication aesthetic.
+# Confidence bars are neutral slate gray (distinct from navy strand)
+# so the three semantic roles (confidence / strand / helix) each have
+# their own visually unambiguous color.
+COLOR_BAR = "#566573"           # slate gray — confidence bars
+COLOR_BAR_DYNAMIC = "#1ABC9C"   # teal — dynamic / flexible residues
+COLOR_THRESHOLD = "#7F8C8D"     # mid-gray — "Strong" dashed reference
+COLOR_HELIX = "#C0392B"         # red — alpha helix (convention)
+COLOR_STRAND = "#1F3A5F"        # navy — beta strand (convention)
+COLOR_BASELINE = "#95A5A6"      # light gray — coil baseline line
+COLOR_SEQ = "#1C2833"           # near-black — sequence letters
+COLOR_NUM = "#7F8C8D"           # mid-gray — residue numbers
+
+# DSSP-like minimum lengths for SS elements
+MIN_HELIX_LEN = 4   # α-helix = one full turn (≥4 residues)
+MIN_STRAND_LEN = 2  # β-strand = ≥2 to distinguish from isolated H-bond
+
+# Confidence score range for visualization. Theoretical range is
+# [-log(1296), 0] ≈ [-7.17, 0], but the empirical 10th–90th percentile
+# range on calibrated FACET v3 is [-5.2, -3.0]. Using the empirical
+# range gives bars with visible dynamic range instead of all bunched
+# near the top.
+CONF_MIN = -5.2                # bottom 10% of valid predictions
+CONF_MAX = -2.5                # top 10% of valid predictions
+CONF_STRONG_THRESHOLD = -3.72  # top 30% (Strong tier, 8.2% fail25)
+
+# Vertical layout — strict layering with clear gaps
+Y_BAR_BASE = 3.6
+Y_BAR_TOP = 5.0
+Y_NUM = 3.25
+Y_SEQ = 2.35
+Y_SS_CENTER = 1.15
+Y_LABEL = 0.35
+Y_MIN = -0.1
+
+SS_ELEMENT_HEIGHT = 0.55
+
+
+# ───────────────── SS element identification ─────────────────
 
 def _ss_elements(residues: list[ResiduePrediction]) -> list[tuple[str, int, int, str]]:
-    """Identify contiguous SS elements (H or E runs).
+    """Identify SS elements with DSSP-like minimum-length smoothing.
 
-    Returns list of (ss_type, start_idx, end_idx_inclusive, label).
+    Returns list of (ss_type, start_idx, end_idx_inclusive, label) where
+    ss_type ∈ {"H", "E"} and label is "α1", "β1", etc.
+
+    Runs shorter than the minimum length are demoted to coil (not emitted).
     """
     elements: list[tuple[str, int, int, str]] = []
     n_h = 0
     n_e = 0
+
     i = 0
     n = len(residues)
     while i < n:
@@ -40,8 +90,9 @@ def _ss_elements(residues: list[ResiduePrediction]) -> list[tuple[str, int, int,
             j = i
             while j < n and residues[j].ss == ss:
                 j += 1
-            # Minimum length filter: single-residue H/E is noise
-            if j - i >= 2:
+            run_len = j - i
+            min_len = MIN_HELIX_LEN if ss == "H" else MIN_STRAND_LEN
+            if run_len >= min_len:
                 if ss == "H":
                     n_h += 1
                     label = f"α{n_h}"
@@ -55,84 +106,84 @@ def _ss_elements(residues: list[ResiduePrediction]) -> list[tuple[str, int, int,
     return elements
 
 
-def _draw_helix_cylinder(ax, x_start, x_end, y_center, height=0.4):
-    """Draw a rounded rectangle (cylinder) for a helix element."""
+def _normalize_confidence(conf: float) -> float:
+    """Map a raw confidence value (negative entropy) to [0, 1] for bar height."""
+    x = (conf - CONF_MIN) / (CONF_MAX - CONF_MIN)
+    return max(0.0, min(1.0, x))
+
+
+# ─────────────────────────── Shapes ──────────────────────────
+
+def _draw_helix(ax, x_start, x_end, y_center):
+    """Draw a filled rounded rectangle (cylinder) for a helix."""
     from matplotlib.patches import FancyBboxPatch
     width = x_end - x_start + 1
     patch = FancyBboxPatch(
-        (x_start - 0.5, y_center - height / 2),
-        width, height,
-        boxstyle="round,pad=0,rounding_size=0.15",
+        (x_start - 0.5, y_center - SS_ELEMENT_HEIGHT / 2),
+        width, SS_ELEMENT_HEIGHT,
+        boxstyle="round,pad=0,rounding_size=0.18",
         facecolor=COLOR_HELIX,
-        edgecolor="black",
-        linewidth=1.0,
+        edgecolor="#5D2116",  # darker red outline
+        linewidth=0.8,
+        zorder=3,
     )
     ax.add_patch(patch)
 
 
-def _draw_strand_arrow(ax, x_start, x_end, y_center, height=0.4):
-    """Draw an arrow shape for a beta strand element."""
+def _draw_strand(ax, x_start, x_end, y_center):
+    """Draw a filled arrow for a beta strand, pointing N→C."""
     from matplotlib.patches import Polygon
-    # Arrow: rectangle body + triangle head at the C-terminal end
     width = x_end - x_start + 1
-    head_width = min(0.8, width * 0.35)  # tip length in residues
+    head_width = min(0.9, max(0.4, width * 0.30))
     body_end = x_end + 0.5 - head_width
 
-    # Flare: wider at the head
-    body_half = height / 2 * 0.7
-    head_half = height / 2
+    body_half = SS_ELEMENT_HEIGHT * 0.35
+    head_half = SS_ELEMENT_HEIGHT * 0.55
 
     points = [
-        (x_start - 0.5, y_center - body_half),          # body bottom-left
-        (body_end,      y_center - body_half),          # body bottom-right
-        (body_end,      y_center - head_half),          # flare bottom
-        (x_end + 0.5,   y_center),                      # arrow tip
-        (body_end,      y_center + head_half),          # flare top
-        (body_end,      y_center + body_half),          # body top-right
-        (x_start - 0.5, y_center + body_half),          # body top-left
+        (x_start - 0.5, y_center - body_half),
+        (body_end,      y_center - body_half),
+        (body_end,      y_center - head_half),
+        (x_end + 0.5,   y_center),
+        (body_end,      y_center + head_half),
+        (body_end,      y_center + body_half),
+        (x_start - 0.5, y_center + body_half),
     ]
     patch = Polygon(
-        points,
-        closed=True,
+        points, closed=True,
         facecolor=COLOR_STRAND,
-        edgecolor="black",
-        linewidth=1.0,
+        edgecolor="#0F1419",
+        linewidth=0.8,
+        zorder=3,
     )
     ax.add_patch(patch)
 
 
-def _conf_color(conf_class: str) -> str:
-    return {
-        "Strong": COLOR_STRONG,
-        "Good": COLOR_GOOD,
-        "Warn": COLOR_WARN,
-        "Dynamic": COLOR_DYNAMIC,
-    }.get(conf_class, COLOR_COIL)
-
+# ─────────────────────────── Main ────────────────────────────
 
 def plot_sequence_ss(
     result: FACETResult,
     path: str | Path | None = None,
     residues_per_row: int = 60,
     title: str | None = None,
-    show_confidence: bool = True,
 ):
     """Publication-grade sequence + secondary structure figure.
 
-    Lays out the protein sequence in rows of ``residues_per_row`` with:
-      - confidence bars above each residue (optional, colored by tier)
-      - one-letter sequence + residue numbers
-      - SS cartoon below (β arrows, α cylinders) with labels
+    Layers (top to bottom):
+      1. Confidence bars (continuous height, single color, + threshold line)
+      2. Residue numbering (every 10, small gray)
+      3. One-letter sequence (bold monospace)
+      4. SS cartoon (helix cylinders, strand arrows)
+      5. SS element labels (β1, α1, ...)
 
     Args:
         result: FACETResult from predict()
-        path: Output path (.png / .pdf / .svg). None → don't save, return fig.
+        path: Output path (.png/.pdf/.svg). None → return fig without saving.
         residues_per_row: Residues per row (default 60)
         title: Figure title (default: derived from result.source)
-        show_confidence: If True, draw confidence bars above sequence
 
     Returns:
-        matplotlib Figure object
+        matplotlib Figure
     """
     import matplotlib.pyplot as plt
     import numpy as np
@@ -143,20 +194,16 @@ def plot_sequence_ss(
         raise ValueError("No residues to plot")
 
     n_rows = math.ceil(n / residues_per_row)
-    row_height = 2.0 if show_confidence else 1.3
+    row_height_in = 1.6  # inches per row
+
     fig, axes = plt.subplots(
         n_rows, 1,
-        figsize=(14, row_height * n_rows + 0.5),
+        figsize=(14, row_height_in * n_rows + 0.6),
         squeeze=False,
     )
     axes = axes.flatten()
 
-    # Precompute SS elements over the whole protein
     elements = _ss_elements(residues)
-
-    # Map seq_id → 0-indexed position for column alignment
-    seq_ids = [r.seq_id for r in residues]
-    min_sid = seq_ids[0]
 
     for row_idx in range(n_rows):
         ax = axes[row_idx]
@@ -165,132 +212,160 @@ def plot_sequence_ss(
         row_residues = residues[r0:r1]
         row_len = len(row_residues)
 
-        # X-axis: local column 0 .. row_len - 1
         x = np.arange(row_len)
 
-        # ── Confidence bars (top) ──
-        if show_confidence:
-            bar_y_top = 1.0
-            bar_y_bot = 0.3
-            bar_heights = []
-            bar_colors = []
-            for r in row_residues:
-                # Normalize confidence to [0, 1] for bar height
-                # Strong ≈ 0.9, Good ≈ 0.6, Warn ≈ 0.4, Dynamic ≈ 0.15
-                cls_height = {
-                    "Strong": 0.9,
-                    "Good": 0.65,
-                    "Warn": 0.45,
-                    "Dynamic": 0.20,
-                }.get(r.confidence_class, 0.2)
-                bar_heights.append(cls_height)
-                bar_colors.append(_conf_color(r.confidence_class))
+        # ── Layer 1: confidence bars ──
+        bar_range = Y_BAR_TOP - Y_BAR_BASE
+        bar_heights = []
+        is_dynamic = []
+        for r in row_residues:
+            if r.confidence_class == "Dynamic":
+                bar_heights.append(0.0)
+                is_dynamic.append(True)
+            else:
+                h = _normalize_confidence(r.confidence) * bar_range
+                bar_heights.append(h)
+                is_dynamic.append(False)
 
-            ax.bar(
-                x, bar_heights,
-                width=0.85,
-                bottom=bar_y_bot,
-                color=bar_colors,
-                edgecolor="none",
+        # Main bars (uniform charcoal color)
+        ax.bar(
+            x, bar_heights,
+            width=0.82,
+            bottom=Y_BAR_BASE,
+            color=COLOR_BAR,
+            edgecolor="none",
+            zorder=2,
+        )
+
+        # Dynamic residues: gray "×" where the bar would be — clearly
+        # distinguishable from a low-confidence short bar (which is a
+        # prediction we trust less, not one we refuse to make).
+        dyn_x = [i for i, d in enumerate(is_dynamic) if d]
+        if dyn_x:
+            ax.scatter(
+                dyn_x,
+                [Y_BAR_BASE + 0.25] * len(dyn_x),
+                s=40,
+                color=COLOR_BAR_DYNAMIC,
+                marker="x",
+                linewidths=1.5,
+                zorder=2,
             )
 
-        # ── Sequence letters ──
-        seq_y = -0.25 if show_confidence else 0.5
+        # Strong threshold dashed reference line
+        strong_norm = _normalize_confidence(CONF_STRONG_THRESHOLD) * bar_range
+        ax.axhline(
+            Y_BAR_BASE + strong_norm,
+            xmin=0, xmax=1,
+            linestyle=(0, (2, 3)),
+            color=COLOR_THRESHOLD,
+            linewidth=0.8,
+            zorder=1,
+            alpha=0.7,
+        )
+
+        # ── Layer 2: residue numbers (every 10 + row termini) ──
+        shown_nums = set()
+        for i, r in enumerate(row_residues):
+            if r.seq_id % 10 == 0 or i == 0 or i == row_len - 1:
+                if r.seq_id in shown_nums:
+                    continue
+                shown_nums.add(r.seq_id)
+                ax.text(
+                    i, Y_NUM, str(r.seq_id),
+                    ha="center", va="center",
+                    fontsize=7,
+                    color=COLOR_NUM,
+                )
+
+        # ── Layer 3: sequence letters ──
         for i, r in enumerate(row_residues):
             aa1 = AA_THREE_TO_ONE.get(r.comp_id, "X")
             ax.text(
-                i, seq_y, aa1,
+                i, Y_SEQ, aa1,
                 ha="center", va="center",
                 fontsize=10,
                 fontfamily="monospace",
                 fontweight="bold",
+                color=COLOR_SEQ,
             )
 
-        # Residue numbering every 10 residues (within the row)
-        num_y = seq_y - 0.6
-        for i, r in enumerate(row_residues):
-            if r.seq_id % 10 == 0 or i == 0 or i == row_len - 1:
-                ax.text(
-                    i, num_y, str(r.seq_id),
-                    ha="center", va="top",
-                    fontsize=7,
-                    color="gray",
-                )
-
-        # ── SS cartoon (bottom) ──
-        ss_y = -1.3 if show_confidence else -0.5
-
-        # Draw a thin baseline for coil
+        # ── Layer 4: SS cartoon ──
+        # Coil baseline (thin horizontal line)
         ax.plot(
             [-0.5, row_len - 0.5],
-            [ss_y, ss_y],
-            color=COLOR_COIL,
+            [Y_SS_CENTER, Y_SS_CENTER],
+            color=COLOR_BASELINE,
             linewidth=1.0,
             zorder=1,
         )
 
-        # Draw SS elements that overlap this row
+        # Draw elements that overlap this row
         for ss_type, start, end, label in elements:
             if end < r0 or start >= r1:
-                continue  # outside this row
-            # Clip to row
+                continue
             row_start = max(start, r0) - r0
             row_end = min(end, r1 - 1) - r0
 
             if ss_type == "H":
-                _draw_helix_cylinder(ax, row_start, row_end, ss_y, height=0.55)
-            elif ss_type == "E":
-                _draw_strand_arrow(ax, row_start, row_end, ss_y, height=0.55)
+                _draw_helix(ax, row_start, row_end, Y_SS_CENTER)
+            else:
+                _draw_strand(ax, row_start, row_end, Y_SS_CENTER)
 
-            # Label (centered under the element within this row)
+            # ── Layer 5: element label ──
             label_x = (row_start + row_end) / 2
+            label_color = COLOR_HELIX if ss_type == "H" else COLOR_STRAND
             ax.text(
-                label_x, ss_y - 0.85, label,
-                ha="center", va="top",
+                label_x, Y_LABEL, label,
+                ha="center", va="center",
                 fontsize=9,
                 fontweight="bold",
-                color=COLOR_HELIX if ss_type == "H" else COLOR_STRAND,
+                color=label_color,
             )
 
-        # ── Axis styling ──
-        ax.set_xlim(-1, residues_per_row)
-        y_min = ss_y - 1.3
-        y_max = 1.3 if show_confidence else 0.9
-        ax.set_ylim(y_min, y_max)
-        ax.set_aspect("auto")
+        # ── Axis ──
+        ax.set_xlim(-1.0, residues_per_row)
+        ax.set_ylim(Y_MIN, Y_BAR_TOP + 0.15)
         ax.axis("off")
 
-    # Title
+    # Title (top, centered)
     if title is None:
-        source = result.source or "FACET prediction"
-        title = f"FACET secondary structure — {source}"
-    fig.suptitle(title, fontsize=12, y=0.995)
+        source = result.source or "FACET"
+        title = f"FACET backbone prediction — {Path(source).stem if source else 'prediction'}"
+    fig.suptitle(title, fontsize=12, y=0.99, fontweight="bold", color=COLOR_SEQ)
 
-    # Legend at the top
-    if show_confidence:
-        from matplotlib.patches import Patch
-        handles = [
-            Patch(facecolor=COLOR_STRONG, label="Strong"),
-            Patch(facecolor=COLOR_GOOD, label="Good"),
-            Patch(facecolor=COLOR_WARN, label="Warn"),
-            Patch(facecolor=COLOR_DYNAMIC, label="Dynamic"),
-            Patch(facecolor=COLOR_HELIX, label="α helix"),
-            Patch(facecolor=COLOR_STRAND, label="β strand"),
-        ]
-        fig.legend(
-            handles=handles,
-            loc="upper right",
-            bbox_to_anchor=(0.99, 0.985),
-            ncol=6,
-            frameon=False,
-            fontsize=8,
-        )
+    # Legend at bottom — keeps the title band clean.
+    # "Dynamic" = flexible / disordered regions. This is not a model
+    # failure — intrinsically disordered tails and loops are real
+    # biological features that FACET correctly flags rather than
+    # assigning spurious rigid angles.
+    from matplotlib.patches import Patch
+    from matplotlib.lines import Line2D
+    handles = [
+        Patch(facecolor=COLOR_BAR, label="Confidence"),
+        Line2D([0], [0], linestyle=(0, (2, 3)), color=COLOR_THRESHOLD,
+               linewidth=1.2, label="Strong threshold"),
+        Line2D([0], [0], marker="x", color=COLOR_BAR_DYNAMIC,
+               markersize=7, linewidth=0, markeredgewidth=1.8,
+               label="Dynamic"),
+        Patch(facecolor=COLOR_HELIX, label="α helix"),
+        Patch(facecolor=COLOR_STRAND, label="β strand"),
+    ]
+    fig.legend(
+        handles=handles,
+        loc="lower center",
+        bbox_to_anchor=(0.5, -0.01),
+        ncol=5,
+        frameon=False,
+        fontsize=9,
+    )
 
-    fig.tight_layout(rect=[0, 0, 1, 0.96])
+    # Leave room at top for title and at bottom for legend
+    fig.tight_layout(rect=[0, 0.055, 1, 0.96])
 
     if path is not None:
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
-        fig.savefig(path, dpi=200, bbox_inches="tight", facecolor="white")
+        fig.savefig(path, dpi=220, bbox_inches="tight", facecolor="white")
 
     return fig

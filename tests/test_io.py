@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from facet.io.formats import FACETResult, Residue, ResiduePrediction, ShiftList
+from facet.io.nef import read_nef
 from facet.io.readers import read_auto, read_csv, read_tab
 from facet.io.writers import (
     write_aco,
@@ -117,6 +118,57 @@ class TestCsvReader:
         assert sl.residues[0].comp_id == "MET"
         assert sl.residues[2].comp_id == "GLY"
         assert "CB" not in sl.residues[2].shifts  # empty field
+
+
+SAMPLE_NEF = """\
+data_test
+
+save_nef_chemical_shift_list_1
+   _nef_chemical_shift_list.sf_category    nef_chemical_shift_list
+   _nef_chemical_shift_list.sf_framecode   nef_chemical_shift_list_1
+
+   loop_
+      _nef_chemical_shift.chain_code
+      _nef_chemical_shift.sequence_code
+      _nef_chemical_shift.residue_name
+      _nef_chemical_shift.atom_name
+      _nef_chemical_shift.value
+      _nef_chemical_shift.value_uncertainty
+      _nef_chemical_shift.element
+      _nef_chemical_shift.isotope_number
+
+      A 1 MET H   8.421  0.02  H  1
+      A 1 MET HA  4.312  0.02  H  1
+      A 1 MET N  120.500 0.1   N  15
+      A 1 MET CA 55.400  0.2   C  13
+      A 1 MET CB 32.900  0.2   C  13
+      A 1 MET C  176.200 0.3   C  13
+      A 2 GLN H   8.810  0.02  H  1
+      A 2 GLN HA  4.290  0.02  H  1
+      A 2 GLN N  123.200 0.1   N  15
+      A 2 GLN CA 55.900  0.2   C  13
+
+   stop_
+save_
+"""
+
+
+class TestNefReader:
+    def test_read(self):
+        path = _write_tmp(SAMPLE_NEF, ".nef")
+        sl = read_nef(path)
+        assert sl.n_residues == 2
+        assert sl.residues[0].comp_id == "MET"
+        assert sl.residues[0].shifts["H"] == pytest.approx(8.421)
+        assert sl.residues[0].shifts["C"] == pytest.approx(176.2)
+        assert sl.residues[1].shifts["CA"] == pytest.approx(55.9)
+        # GLN in this sample has no CB
+        assert "CB" not in sl.residues[1].shifts
+
+    def test_auto_detect(self):
+        path = _write_tmp(SAMPLE_NEF, ".nef")
+        sl = read_auto(path)
+        assert sl.n_residues == 2
 
 
 class TestAutoDetect:

@@ -4,13 +4,13 @@ REMARK https://github.com/bluegems661/facet-nmr
 VARS   RESID RESNAME PHI PSI DPHI DPSI SS CHI1 CLASS
 FORMAT %4d %s %8.1f %8.1f %6.1f %6.1f %s %s %s
 
-    1 M    -64.8    -45.2   40.0   40.0 C   t Warn
-    2 Q    -64.6    -44.9   40.0   40.0 C   t Warn
-    3 I    -65.0    -25.2   40.0   40.0 C  g- Warn
-    4 F    -65.3    -35.2   25.0   25.0 H  g- Good
-    5 V    -65.1    -34.9   25.0   25.0 H   t Good
-    6 K    -65.1    -35.2   25.0   25.0 H  g- Good
-    7 T    -65.0    -35.0   25.0   25.0 H  g- Good
-    8 L    -65.2    -45.1   25.0   25.0 H  g- Good
-    9 T    -65.1    -35.2   25.0   25.0 H  g- Good
-   10 G    -65.0    -45.1   25.0   25.0 H   . Good
+    1 M    -64.8    -45.2   40.0   40.0 C   t Dynamic
+    2 Q    -64.6    -44.9   40.0   40.0 C   t Dynamic
+    3 I    -65.0    -25.2   26.0   26.0 C   t Warn
+    4 F    -65.3    -35.2   26.0   26.0 H  g+ Warn
+    5 V    -65.1    -34.9   16.0   16.0 H   t Strong
+    6 K    -65.1    -35.2   16.0   16.0 H   t Strong
+    7 T    -65.0    -35.0   16.0   16.0 H   t Strong
+    8 L    -65.2    -45.1   16.0   16.0 H   t Strong
+    9 T    -65.1    -35.2   16.0   16.0 H   t Strong
+   10 G    -65.0    -45.1   22.0   22.0 H   . Good

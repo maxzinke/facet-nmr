@@ -10,6 +10,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from .formats import AA_ONE_TO_THREE, BACKBONE_NUCLEI, Residue, ShiftList
+from .nef import read_nef
 
 
 def read_tab(path: str | Path) -> ShiftList:
@@ -172,7 +173,9 @@ def read_auto(path: str | Path) -> ShiftList:
     Detection heuristic:
       - .csv → CSV
       - .tab → TALOS-N tab
-      - Otherwise: sniff first lines for VARS/FORMAT → tab, comma → CSV
+      - .nef → NEF
+      - .str → NMR-STAR (if pynmrstar available)
+      - Otherwise: sniff content for format markers
     """
     path = Path(path)
     suffix = path.suffix.lower()
@@ -181,9 +184,13 @@ def read_auto(path: str | Path) -> ShiftList:
         return read_csv(path)
     if suffix == ".tab":
         return read_tab(path)
+    if suffix == ".nef":
+        return read_nef(path)
 
     # Sniff content
     text = path.read_text(errors="replace")[:2000]
+    if "nef_chemical_shift" in text:
+        return read_nef(path)
     if "VARS" in text or "FORMAT" in text:
         return read_tab(path)
     if "," in text.split("\n")[0]:

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from .formats import FACETResult, ResiduePrediction, ShiftList
+from .nef import read_nef
 from .readers import read_auto, read_tab, read_csv
 
 __all__ = [
@@ -11,4 +12,5 @@ __all__ = [
     "read_auto",
     "read_tab",
     "read_csv",
+    "read_nef",
 ]

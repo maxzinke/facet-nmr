@@ -34,14 +34,29 @@ AA_TO_IDX = {aa: i + 1 for i, aa in enumerate(CANONICAL_AA)}
 # Aromatic AAs for the neighbor flag
 AROMATIC_AA = {"PHE", "TRP", "TYR", "HIS"}
 
-# Confidence thresholds (calibrated from v3 risk-coverage curves)
-# These map negative-entropy confidence → TALOS-N-style classes
+# Confidence thresholds calibrated from FACET v3 risk-coverage curve
+# on the 26,944-residue held-out test set (2026-04-12).
+#
+# Confidence = negative entropy of the 36x36 coarse Ramachandran grid.
+# Values are ordered from most confident (least negative) to least.
+#
+# Coverage summary (cumulative, sorted by confidence descending):
+#   top 10%:  conf >= -3.02,  median 6.9°,  fail25  5.1%,  fail30  4.1%
+#   top 30%:  conf >= -3.72,  median 7.9°,  fail25  8.2%,  fail30  6.9%
+#   top 60%:  conf >= -4.36,  median 10.8°, fail25 15.0%,  fail30 11.5%
+#   top 85%:  conf >= -5.02,  median 12.9°, fail25 22.0%,  fail30 17.3%
+#
+# Class mapping:
+#   STRONG (top 30%): comparable to TALOS-N Strong — 8% fail25, use for restraints
+#   GOOD (30-60%): moderate, 15% fail25 — still useful for structure calc
+#   WARN (60-85%): interpret cautiously, 22% fail25
+#   DYNAMIC (bottom 15%): likely disordered or ambiguous
 _CONF_THRESHOLDS = [
-    (-3.0, CONF_STRONG),   # highest confidence (low entropy)
-    (-4.5, CONF_GOOD),
-    (-5.5, CONF_WARN),
+    (-3.72, CONF_STRONG),   # top 30%: fail25 ~8%
+    (-4.36, CONF_GOOD),     # top 60%: fail25 ~15%
+    (-5.02, CONF_WARN),     # top 85%: fail25 ~22%
 ]
-# Below all thresholds → Dynamic
+# Below all thresholds → Dynamic (bottom 15%)
 
 
 def _classify_confidence(conf: float) -> str:
@@ -53,15 +68,19 @@ def _classify_confidence(conf: float) -> str:
 
 
 def _estimate_error_bound(conf: float) -> float:
-    """Rough error bound (degrees) from confidence, for restraint generation."""
-    # Empirical mapping from risk-coverage curve (approximate)
-    if conf >= -3.0:
-        return 15.0
-    elif conf >= -4.5:
-        return 25.0
-    elif conf >= -5.5:
-        return 40.0
-    return 60.0
+    """Per-class error bound (degrees) for restraint generation.
+
+    Derived from the test-set risk-coverage curve (2x the median error
+    within each tier, matching TALOS-N's convention of using 2x the
+    fit residual as the restraint half-width).
+    """
+    if conf >= -3.72:
+        return 16.0  # STRONG: 2x median (8°)
+    elif conf >= -4.36:
+        return 22.0  # GOOD: 2x median (11°)
+    elif conf >= -5.02:
+        return 26.0  # WARN: 2x median (13°)
+    return 40.0  # DYNAMIC: wide bounds (if used at all)
 
 
 def _build_windows(

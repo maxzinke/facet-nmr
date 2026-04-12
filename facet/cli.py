@@ -36,7 +36,10 @@ def main(argv: list[str] | None = None) -> None:
 
     # ── predict ──
     pred = sub.add_parser("predict", help="Predict torsion angles from a shift list")
-    pred.add_argument("input", help="Shift list file (.tab, .csv, .nef)")
+    pred.add_argument("input", nargs="?", default=None,
+                      help="Shift list file (.tab, .csv, .nef)")
+    pred.add_argument("--bmrb", type=str, default=None,
+                      help="Fetch shifts directly from a BMRB entry ID")
     pred.add_argument("-o", "--output", default=None,
                       help="Output path (default: <input>_facet.<format>)")
     pred.add_argument("--format", choices=["tbl", "aco", "nef", "predtab", "csv", "json"],
@@ -69,17 +72,32 @@ def _cmd_predict(args) -> None:
     from .inference import predict
     from .io.writers import write_tbl, write_aco, write_nef, write_predtab, write_csv, write_json
 
-    input_path = Path(args.input)
-    if not input_path.exists():
-        logger.error("Input file not found: %s", input_path)
+    # Source: either BMRB ID or file path
+    if args.bmrb:
+        from .io.bmrb import fetch_bmrb
+        logger.info("Fetching BMRB entry %s ...", args.bmrb)
+        shift_list = fetch_bmrb(args.bmrb)
+        logger.info("Fetched %d residues from BMRB %s", shift_list.n_residues, args.bmrb)
+        stem = f"bmrb_{args.bmrb}"
+        out_dir = Path.cwd()
+        input_display = f"BMRB:{args.bmrb}"
+        predict_input = shift_list
+    elif args.input:
+        input_path = Path(args.input)
+        if not input_path.exists():
+            logger.error("Input file not found: %s", input_path)
+            sys.exit(1)
+        stem = input_path.stem
+        out_dir = input_path.parent
+        input_display = str(input_path)
+        predict_input = input_path
+    else:
+        logger.error("Provide an input file or --bmrb ID")
         sys.exit(1)
 
-    stem = input_path.stem
-    out_dir = input_path.parent
-
-    logger.info("Predicting from %s ...", input_path)
+    logger.info("Predicting from %s ...", input_display)
     result = predict(
-        input_path,
+        predict_input,
         checkpoint=args.checkpoint,
         device=args.device,
     )

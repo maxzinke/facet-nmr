@@ -1,0 +1,309 @@
+! FACET dihedral restraints — 44 residues
+
+assign (resid 1 and name C)  (resid 2 and name N)
+       (resid 2 and name CA) (resid 2 and name C)  1.0   -94.8  22.0
+! PHI 2 GLN (Good)
+assign (resid 2 and name N)  (resid 2 and name CA)
+       (resid 2 and name C)  (resid 3 and name N)  1.0   124.8  22.0
+! PSI 2 GLN (Good)
+
+assign (resid 2 and name C)  (resid 3 and name N)
+       (resid 3 and name CA) (resid 3 and name C)  1.0  -135.3  22.0
+! PHI 3 VAL (Good)
+assign (resid 3 and name N)  (resid 3 and name CA)
+       (resid 3 and name C)  (resid 4 and name N)  1.0   154.8  22.0
+! PSI 3 VAL (Good)
+
+assign (resid 3 and name C)  (resid 4 and name N)
+       (resid 4 and name CA) (resid 4 and name C)  1.0  -115.2  22.0
+! PHI 4 PHE (Good)
+assign (resid 4 and name N)  (resid 4 and name CA)
+       (resid 4 and name C)  (resid 5 and name N)  1.0   134.8  22.0
+! PSI 4 PHE (Good)
+
+assign (resid 4 and name C)  (resid 5 and name N)
+       (resid 5 and name CA) (resid 5 and name C)  1.0  -115.2  22.0
+! PHI 5 LEU (Good)
+assign (resid 5 and name N)  (resid 5 and name CA)
+       (resid 5 and name C)  (resid 6 and name N)  1.0   135.1  22.0
+! PSI 5 LEU (Good)
+
+assign (resid 5 and name C)  (resid 6 and name N)
+       (resid 6 and name CA) (resid 6 and name C)  1.0  -105.2  22.0
+! PHI 6 LYS (Good)
+assign (resid 6 and name N)  (resid 6 and name CA)
+       (resid 6 and name C)  (resid 7 and name N)  1.0   134.9  22.0
+! PSI 6 LYS (Good)
+
+assign (resid 7 and name C)  (resid 8 and name N)
+       (resid 8 and name CA) (resid 8 and name C)  1.0   -65.3  22.0
+! PHI 8 LEU (Good)
+assign (resid 8 and name N)  (resid 8 and name CA)
+       (resid 8 and name C)  (resid 9 and name N)  1.0   -25.3  22.0
+! PSI 8 LEU (Good)
+
+assign (resid 11 and name C)  (resid 12 and name N)
+       (resid 12 and name CA) (resid 12 and name C)  1.0  -105.2  22.0
+! PHI 12 THR (Good)
+assign (resid 12 and name N)  (resid 12 and name CA)
+       (resid 12 and name C)  (resid 13 and name N)  1.0   124.9  22.0
+! PSI 12 THR (Good)
+
+assign (resid 12 and name C)  (resid 13 and name N)
+       (resid 13 and name CA) (resid 13 and name C)  1.0  -125.1  22.0
+! PHI 13 VAL (Good)
+assign (resid 13 and name N)  (resid 13 and name CA)
+       (resid 13 and name C)  (resid 14 and name N)  1.0   144.8  22.0
+! PSI 13 VAL (Good)
+
+assign (resid 13 and name C)  (resid 14 and name N)
+       (resid 14 and name CA) (resid 14 and name C)  1.0  -115.3  22.0
+! PHI 14 THR (Good)
+assign (resid 14 and name N)  (resid 14 and name CA)
+       (resid 14 and name C)  (resid 15 and name N)  1.0   124.9  22.0
+! PSI 14 THR (Good)
+
+assign (resid 14 and name C)  (resid 15 and name N)
+       (resid 15 and name CA) (resid 15 and name C)  1.0  -115.2  22.0
+! PHI 15 ILE (Good)
+assign (resid 15 and name N)  (resid 15 and name CA)
+       (resid 15 and name C)  (resid 16 and name N)  1.0   134.8  22.0
+! PSI 15 ILE (Good)
+
+assign (resid 15 and name C)  (resid 16 and name N)
+       (resid 16 and name CA) (resid 16 and name C)  1.0   -95.2  22.0
+! PHI 16 GLU (Good)
+assign (resid 16 and name N)  (resid 16 and name CA)
+       (resid 16 and name C)  (resid 17 and name N)  1.0   115.0  22.0
+! PSI 16 GLU (Good)
+
+assign (resid 16 and name C)  (resid 17 and name N)
+       (resid 17 and name CA) (resid 17 and name C)  1.0  -135.0  22.0
+! PHI 17 VAL (Good)
+assign (resid 17 and name N)  (resid 17 and name CA)
+       (resid 17 and name C)  (resid 18 and name N)  1.0   154.9  22.0
+! PSI 17 VAL (Good)
+
+assign (resid 17 and name C)  (resid 18 and name N)
+       (resid 18 and name CA) (resid 18 and name C)  1.0  -114.8  22.0
+! PHI 18 GLU (Good)
+assign (resid 18 and name N)  (resid 18 and name CA)
+       (resid 18 and name C)  (resid 19 and name N)  1.0   154.8  22.0
+! PSI 18 GLU (Good)
+
+assign (resid 18 and name C)  (resid 19 and name N)
+       (resid 19 and name CA) (resid 19 and name C)  1.0   -66.5  16.0
+! PHI 19 PRO (Strong)
+assign (resid 19 and name N)  (resid 19 and name CA)
+       (resid 19 and name C)  (resid 20 and name N)  1.0   -15.1  16.0
+! PSI 19 PRO (Strong)
+
+assign (resid 22 and name C)  (resid 23 and name N)
+       (resid 23 and name CA) (resid 23 and name C)  1.0   -55.2  16.0
+! PHI 23 VAL (Strong)
+assign (resid 23 and name N)  (resid 23 and name CA)
+       (resid 23 and name C)  (resid 24 and name N)  1.0   -45.2  16.0
+! PSI 23 VAL (Strong)
+
+assign (resid 23 and name C)  (resid 24 and name N)
+       (resid 24 and name CA) (resid 24 and name C)  1.0   -65.0  16.0
+! PHI 24 GLU (Strong)
+assign (resid 24 and name N)  (resid 24 and name CA)
+       (resid 24 and name C)  (resid 25 and name N)  1.0   -34.9  16.0
+! PSI 24 GLU (Strong)
+
+assign (resid 24 and name C)  (resid 25 and name N)
+       (resid 25 and name CA) (resid 25 and name C)  1.0   -65.0  16.0
+! PHI 25 ASN (Strong)
+assign (resid 25 and name N)  (resid 25 and name CA)
+       (resid 25 and name C)  (resid 26 and name N)  1.0   -44.9  16.0
+! PSI 25 ASN (Strong)
+
+assign (resid 25 and name C)  (resid 26 and name N)
+       (resid 26 and name CA) (resid 26 and name C)  1.0   -65.2  16.0
+! PHI 26 PHE (Strong)
+assign (resid 26 and name N)  (resid 26 and name CA)
+       (resid 26 and name C)  (resid 27 and name N)  1.0   -45.0  16.0
+! PSI 26 PHE (Strong)
+
+assign (resid 26 and name C)  (resid 27 and name N)
+       (resid 27 and name CA) (resid 27 and name C)  1.0   -65.0  16.0
+! PHI 27 LYS (Strong)
+assign (resid 27 and name N)  (resid 27 and name CA)
+       (resid 27 and name C)  (resid 28 and name N)  1.0   -34.9  16.0
+! PSI 27 LYS (Strong)
+
+assign (resid 27 and name C)  (resid 28 and name N)
+       (resid 28 and name CA) (resid 28 and name C)  1.0   -65.0  16.0
+! PHI 28 ALA (Strong)
+assign (resid 28 and name N)  (resid 28 and name CA)
+       (resid 28 and name C)  (resid 29 and name N)  1.0   -44.9  16.0
+! PSI 28 ALA (Strong)
+
+assign (resid 28 and name C)  (resid 29 and name N)
+       (resid 29 and name CA) (resid 29 and name C)  1.0   -65.0  16.0
+! PHI 29 LYS (Strong)
+assign (resid 29 and name N)  (resid 29 and name CA)
+       (resid 29 and name C)  (resid 30 and name N)  1.0   -44.9  16.0
+! PSI 29 LYS (Strong)
+
+assign (resid 29 and name C)  (resid 30 and name N)
+       (resid 30 and name CA) (resid 30 and name C)  1.0   -64.9  16.0
+! PHI 30 ILE (Strong)
+assign (resid 30 and name N)  (resid 30 and name CA)
+       (resid 30 and name C)  (resid 31 and name N)  1.0   -45.0  16.0
+! PSI 30 ILE (Strong)
+
+assign (resid 30 and name C)  (resid 31 and name N)
+       (resid 31 and name CA) (resid 31 and name C)  1.0   -65.0  16.0
+! PHI 31 GLN (Strong)
+assign (resid 31 and name N)  (resid 31 and name CA)
+       (resid 31 and name C)  (resid 32 and name N)  1.0   -35.0  16.0
+! PSI 31 GLN (Strong)
+
+assign (resid 31 and name C)  (resid 32 and name N)
+       (resid 32 and name CA) (resid 32 and name C)  1.0   -65.1  16.0
+! PHI 32 ASP (Strong)
+assign (resid 32 and name N)  (resid 32 and name CA)
+       (resid 32 and name C)  (resid 33 and name N)  1.0   -35.1  16.0
+! PSI 32 ASP (Strong)
+
+assign (resid 36 and name C)  (resid 37 and name N)
+       (resid 37 and name CA) (resid 37 and name C)  1.0   -66.1  22.0
+! PHI 37 PRO (Good)
+assign (resid 37 and name N)  (resid 37 and name CA)
+       (resid 37 and name C)  (resid 38 and name N)  1.0   155.0  22.0
+! PSI 37 PRO (Good)
+
+assign (resid 37 and name C)  (resid 38 and name N)
+       (resid 38 and name CA) (resid 38 and name C)  1.0   -66.0  16.0
+! PHI 38 PRO (Strong)
+assign (resid 38 and name N)  (resid 38 and name CA)
+       (resid 38 and name C)  (resid 39 and name N)  1.0   -15.1  16.0
+! PSI 38 PRO (Strong)
+
+assign (resid 38 and name C)  (resid 39 and name N)
+       (resid 39 and name CA) (resid 39 and name C)  1.0   -65.2  22.0
+! PHI 39 ASP (Good)
+assign (resid 39 and name N)  (resid 39 and name CA)
+       (resid 39 and name C)  (resid 40 and name N)  1.0   -25.0  22.0
+! PSI 39 ASP (Good)
+
+assign (resid 41 and name C)  (resid 42 and name N)
+       (resid 42 and name CA) (resid 42 and name C)  1.0  -105.1  22.0
+! PHI 42 ARG (Good)
+assign (resid 42 and name N)  (resid 42 and name CA)
+       (resid 42 and name C)  (resid 43 and name N)  1.0   114.9  22.0
+! PSI 42 ARG (Good)
+
+assign (resid 42 and name C)  (resid 43 and name N)
+       (resid 43 and name CA) (resid 43 and name C)  1.0  -115.1  22.0
+! PHI 43 LEU (Good)
+assign (resid 43 and name N)  (resid 43 and name CA)
+       (resid 43 and name C)  (resid 44 and name N)  1.0   135.0  22.0
+! PSI 43 LEU (Good)
+
+assign (resid 43 and name C)  (resid 44 and name N)
+       (resid 44 and name CA) (resid 44 and name C)  1.0  -115.3  22.0
+! PHI 44 ILE (Good)
+assign (resid 44 and name N)  (resid 44 and name CA)
+       (resid 44 and name C)  (resid 45 and name N)  1.0   134.8  22.0
+! PSI 44 ILE (Good)
+
+assign (resid 45 and name C)  (resid 46 and name N)
+       (resid 46 and name CA) (resid 46 and name C)  1.0    54.8  22.0
+! PHI 46 ALA (Good)
+assign (resid 46 and name N)  (resid 46 and name CA)
+       (resid 46 and name C)  (resid 47 and name N)  1.0    35.1  22.0
+! PSI 46 ALA (Good)
+
+assign (resid 47 and name C)  (resid 48 and name N)
+       (resid 48 and name CA) (resid 48 and name C)  1.0  -125.2  22.0
+! PHI 48 LYS (Good)
+assign (resid 48 and name N)  (resid 48 and name CA)
+       (resid 48 and name C)  (resid 49 and name N)  1.0   134.9  22.0
+! PSI 48 LYS (Good)
+
+assign (resid 49 and name C)  (resid 50 and name N)
+       (resid 50 and name CA) (resid 50 and name C)  1.0   -75.3  22.0
+! PHI 50 LEU (Good)
+assign (resid 50 and name N)  (resid 50 and name CA)
+       (resid 50 and name C)  (resid 51 and name N)  1.0   125.0  22.0
+! PSI 50 LEU (Good)
+
+assign (resid 55 and name C)  (resid 56 and name N)
+       (resid 56 and name CA) (resid 56 and name C)  1.0   -55.2  16.0
+! PHI 56 LEU (Strong)
+assign (resid 56 and name N)  (resid 56 and name CA)
+       (resid 56 and name C)  (resid 57 and name N)  1.0   -45.0  16.0
+! PSI 56 LEU (Strong)
+
+assign (resid 56 and name C)  (resid 57 and name N)
+       (resid 57 and name CA) (resid 57 and name C)  1.0   -65.1  16.0
+! PHI 57 SER (Strong)
+assign (resid 57 and name N)  (resid 57 and name CA)
+       (resid 57 and name C)  (resid 58 and name N)  1.0   -35.1  16.0
+! PSI 57 SER (Strong)
+
+assign (resid 57 and name C)  (resid 58 and name N)
+       (resid 58 and name CA) (resid 58 and name C)  1.0   -65.0  22.0
+! PHI 58 ASP (Good)
+assign (resid 58 and name N)  (resid 58 and name CA)
+       (resid 58 and name C)  (resid 59 and name N)  1.0   -45.3  22.0
+! PSI 58 ASP (Good)
+
+assign (resid 59 and name C)  (resid 60 and name N)
+       (resid 60 and name CA) (resid 60 and name C)  1.0    64.8  22.0
+! PHI 60 ASN (Good)
+assign (resid 60 and name N)  (resid 60 and name CA)
+       (resid 60 and name C)  (resid 61 and name N)  1.0    34.8  22.0
+! PSI 60 ASN (Good)
+
+assign (resid 63 and name C)  (resid 64 and name N)
+       (resid 64 and name CA) (resid 64 and name C)  1.0    54.8  22.0
+! PHI 64 GLU (Good)
+assign (resid 64 and name N)  (resid 64 and name CA)
+       (resid 64 and name C)  (resid 65 and name N)  1.0    44.8  22.0
+! PSI 64 GLU (Good)
+
+assign (resid 65 and name C)  (resid 66 and name N)
+       (resid 66 and name CA) (resid 66 and name C)  1.0  -115.3  22.0
+! PHI 66 THR (Good)
+assign (resid 66 and name N)  (resid 66 and name CA)
+       (resid 66 and name C)  (resid 67 and name N)  1.0   124.8  22.0
+! PSI 66 THR (Good)
+
+assign (resid 66 and name C)  (resid 67 and name N)
+       (resid 67 and name CA) (resid 67 and name C)  1.0  -105.2  22.0
+! PHI 67 ILE (Good)
+assign (resid 67 and name N)  (resid 67 and name CA)
+       (resid 67 and name C)  (resid 68 and name N)  1.0   134.9  22.0
+! PSI 67 ILE (Good)
+
+assign (resid 67 and name C)  (resid 68 and name N)
+       (resid 68 and name CA) (resid 68 and name C)  1.0  -105.4  22.0
+! PHI 68 HIS (Good)
+assign (resid 68 and name N)  (resid 68 and name CA)
+       (resid 68 and name C)  (resid 69 and name N)  1.0   124.9  22.0
+! PSI 68 HIS (Good)
+
+assign (resid 68 and name C)  (resid 69 and name N)
+       (resid 69 and name CA) (resid 69 and name C)  1.0   -95.3  22.0
+! PHI 69 LEU (Good)
+assign (resid 69 and name N)  (resid 69 and name CA)
+       (resid 69 and name C)  (resid 70 and name N)  1.0   115.0  22.0
+! PSI 69 LEU (Good)
+
+assign (resid 69 and name C)  (resid 70 and name N)
+       (resid 70 and name CA) (resid 70 and name C)  1.0  -115.2  22.0
+! PHI 70 VAL (Good)
+assign (resid 70 and name N)  (resid 70 and name CA)
+       (resid 70 and name C)  (resid 71 and name N)  1.0   134.7  22.0
+! PSI 70 VAL (Good)
+
+assign (resid 70 and name C)  (resid 71 and name N)
+       (resid 71 and name CA) (resid 71 and name C)  1.0   -95.3  22.0
+! PHI 71 LEU (Good)
+assign (resid 71 and name N)  (resid 71 and name CA)
+       (resid 71 and name C)  (resid 72 and name N)  1.0   124.9  22.0
+! PSI 71 LEU (Good)

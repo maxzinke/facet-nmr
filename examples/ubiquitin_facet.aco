@@ -1,17 +1,15 @@
 # FACET torsion angle restraints
-# 7 residues
+# 6 residues
 
-    4 PHE  PHI     -90.3    -40.3
-    4 PHE  PSI     -60.2    -10.2
-    5 VAL  PHI     -90.1    -40.1
-    5 VAL  PSI     -59.9     -9.9
-    6 LYS  PHI     -90.1    -40.1
-    6 LYS  PSI     -60.2    -10.2
-    7 THR  PHI     -90.0    -40.0
-    7 THR  PSI     -60.0    -10.0
-    8 LEU  PHI     -90.2    -40.2
-    8 LEU  PSI     -70.1    -20.1
-    9 THR  PHI     -90.1    -40.1
-    9 THR  PSI     -60.2    -10.2
-   10 GLY  PHI     -90.0    -40.0
-   10 GLY  PSI     -70.1    -20.1
+    5 VAL  PHI     -81.1    -49.1
+    5 VAL  PSI     -50.9    -18.9
+    6 LYS  PHI     -81.1    -49.1
+    6 LYS  PSI     -51.2    -19.2
+    7 THR  PHI     -81.0    -49.0
+    7 THR  PSI     -51.0    -19.0
+    8 LEU  PHI     -81.2    -49.2
+    8 LEU  PSI     -61.1    -29.1
+    9 THR  PHI     -81.1    -49.1
+    9 THR  PSI     -51.2    -19.2
+   10 GLY  PHI     -87.0    -43.0
+   10 GLY  PSI     -67.1    -23.1

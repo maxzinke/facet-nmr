@@ -7,6 +7,7 @@ import pytest
 
 from facet.io.formats import FACETResult, Residue, ResiduePrediction, ShiftList
 from facet.io.nef import read_nef
+from facet.io.nmrstar import read_nmrstar
 from facet.io.readers import read_auto, read_csv, read_tab
 from facet.io.writers import (
     write_aco,
@@ -151,6 +152,52 @@ save_nef_chemical_shift_list_1
    stop_
 save_
 """
+
+
+SAMPLE_NMRSTAR = """\
+data_test
+
+save_assigned_chemical_shifts_1
+   _Assigned_chem_shift_list.Sf_category     assigned_chemical_shifts
+   _Assigned_chem_shift_list.Sf_framecode    assigned_chem_shift_list_1
+
+   loop_
+      _Atom_chem_shift.ID
+      _Atom_chem_shift.Entity_assembly_ID
+      _Atom_chem_shift.Seq_ID
+      _Atom_chem_shift.Comp_ID
+      _Atom_chem_shift.Atom_ID
+      _Atom_chem_shift.Val
+
+      1 1 1 MET H   8.421
+      2 1 1 MET HA  4.312
+      3 1 1 MET N  120.500
+      4 1 1 MET CA 55.400
+      5 1 1 MET CB 32.900
+      6 1 1 MET C  176.200
+      7 1 2 GLN H   8.810
+      8 1 2 GLN N  123.200
+      9 1 2 GLN CA 55.900
+
+   stop_
+save_
+"""
+
+
+class TestNmrstarReader:
+    def test_read(self):
+        path = _write_tmp(SAMPLE_NMRSTAR, ".str")
+        sl = read_nmrstar(path)
+        assert sl.n_residues == 2
+        assert sl.residues[0].comp_id == "MET"
+        assert sl.residues[0].shifts["H"] == pytest.approx(8.421)
+        assert sl.residues[0].shifts["C"] == pytest.approx(176.2)
+        assert sl.residues[1].shifts["CA"] == pytest.approx(55.9)
+
+    def test_auto_detect(self):
+        path = _write_tmp(SAMPLE_NMRSTAR, ".str")
+        sl = read_auto(path)
+        assert sl.n_residues == 2
 
 
 class TestNefReader:

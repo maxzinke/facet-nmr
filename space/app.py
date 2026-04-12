@@ -172,7 +172,7 @@ demo = gr.Interface(
     examples=[
         ["examples/ubiquitin.tab", ["XPLOR .tbl", "CYANA .aco", "pred.tab"]],
     ],
-    allow_flagging="never",
+    flagging_mode="never",
 )
 
 if __name__ == "__main__":

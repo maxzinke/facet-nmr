@@ -11,6 +11,7 @@ from pathlib import Path
 
 from .formats import AA_ONE_TO_THREE, BACKBONE_NUCLEI, Residue, ShiftList
 from .nef import read_nef
+from .nmrstar import read_nmrstar
 
 
 def read_tab(path: str | Path) -> ShiftList:
@@ -186,11 +187,15 @@ def read_auto(path: str | Path) -> ShiftList:
         return read_tab(path)
     if suffix == ".nef":
         return read_nef(path)
+    if suffix in (".str", ".bmrb"):
+        return read_nmrstar(path)
 
     # Sniff content
     text = path.read_text(errors="replace")[:2000]
     if "nef_chemical_shift" in text:
         return read_nef(path)
+    if "_Atom_chem_shift" in text:
+        return read_nmrstar(path)
     if "VARS" in text or "FORMAT" in text:
         return read_tab(path)
     if "," in text.split("\n")[0]:

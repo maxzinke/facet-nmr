@@ -1,0 +1,50 @@
+! FACET dihedral restraints — 7 residues
+
+assign (resid 3 and name C)  (resid 4 and name N)
+       (resid 4 and name CA) (resid 4 and name C)  1.0   -65.3  25.0
+! PHI 4 PHE (Good)
+assign (resid 4 and name N)  (resid 4 and name CA)
+       (resid 4 and name C)  (resid 5 and name N)  1.0   -35.2  25.0
+! PSI 4 PHE (Good)
+
+assign (resid 4 and name C)  (resid 5 and name N)
+       (resid 5 and name CA) (resid 5 and name C)  1.0   -65.1  25.0
+! PHI 5 VAL (Good)
+assign (resid 5 and name N)  (resid 5 and name CA)
+       (resid 5 and name C)  (resid 6 and name N)  1.0   -34.9  25.0
+! PSI 5 VAL (Good)
+
+assign (resid 5 and name C)  (resid 6 and name N)
+       (resid 6 and name CA) (resid 6 and name C)  1.0   -65.1  25.0
+! PHI 6 LYS (Good)
+assign (resid 6 and name N)  (resid 6 and name CA)
+       (resid 6 and name C)  (resid 7 and name N)  1.0   -35.2  25.0
+! PSI 6 LYS (Good)
+
+assign (resid 6 and name C)  (resid 7 and name N)
+       (resid 7 and name CA) (resid 7 and name C)  1.0   -65.0  25.0
+! PHI 7 THR (Good)
+assign (resid 7 and name N)  (resid 7 and name CA)
+       (resid 7 and name C)  (resid 8 and name N)  1.0   -35.0  25.0
+! PSI 7 THR (Good)
+
+assign (resid 7 and name C)  (resid 8 and name N)
+       (resid 8 and name CA) (resid 8 and name C)  1.0   -65.2  25.0
+! PHI 8 LEU (Good)
+assign (resid 8 and name N)  (resid 8 and name CA)
+       (resid 8 and name C)  (resid 9 and name N)  1.0   -45.1  25.0
+! PSI 8 LEU (Good)
+
+assign (resid 8 and name C)  (resid 9 and name N)
+       (resid 9 and name CA) (resid 9 and name C)  1.0   -65.1  25.0
+! PHI 9 THR (Good)
+assign (resid 9 and name N)  (resid 9 and name CA)
+       (resid 9 and name C)  (resid 10 and name N)  1.0   -35.2  25.0
+! PSI 9 THR (Good)
+
+assign (resid 9 and name C)  (resid 10 and name N)
+       (resid 10 and name CA) (resid 10 and name C)  1.0   -65.0  25.0
+! PHI 10 GLY (Good)
+assign (resid 10 and name N)  (resid 10 and name CA)
+       (resid 10 and name C)  (resid 11 and name N)  1.0   -45.1  25.0
+! PSI 10 GLY (Good)

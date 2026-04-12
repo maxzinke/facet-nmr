@@ -1,0 +1,57 @@
+data_facet_restraints
+
+save_nef_nmr_meta_data
+   _nef_nmr_meta_data.sf_category       nef_nmr_meta_data
+   _nef_nmr_meta_data.sf_framecode      nef_nmr_meta_data
+   _nef_nmr_meta_data.format_name       nmr_exchange_format
+   _nef_nmr_meta_data.format_version    1.1
+   _nef_nmr_meta_data.program_name      facet
+   _nef_nmr_meta_data.program_version   0.1.0
+save_
+
+save_nef_dihedral_restraint_list_1
+   _nef_dihedral_restraint_list.sf_category     nef_dihedral_restraint_list
+   _nef_dihedral_restraint_list.sf_framecode    nef_dihedral_restraint_list_1
+
+   loop_
+      _nef_dihedral_restraint.index
+      _nef_dihedral_restraint.restraint_id
+      _nef_dihedral_restraint.restraint_combination_id
+      _nef_dihedral_restraint.chain_code_1
+      _nef_dihedral_restraint.sequence_code_1
+      _nef_dihedral_restraint.residue_name_1
+      _nef_dihedral_restraint.atom_name_1
+      _nef_dihedral_restraint.chain_code_2
+      _nef_dihedral_restraint.sequence_code_2
+      _nef_dihedral_restraint.residue_name_2
+      _nef_dihedral_restraint.atom_name_2
+      _nef_dihedral_restraint.chain_code_3
+      _nef_dihedral_restraint.sequence_code_3
+      _nef_dihedral_restraint.residue_name_3
+      _nef_dihedral_restraint.atom_name_3
+      _nef_dihedral_restraint.chain_code_4
+      _nef_dihedral_restraint.sequence_code_4
+      _nef_dihedral_restraint.residue_name_4
+      _nef_dihedral_restraint.atom_name_4
+      _nef_dihedral_restraint.name
+      _nef_dihedral_restraint.target_value
+      _nef_dihedral_restraint.lower_limit
+      _nef_dihedral_restraint.upper_limit
+
+      1 1 . A 3 . C A 4 PHE N A 4 PHE CA A 4 PHE C PHI -65.3 -90.3 -40.3
+      2 1 . A 4 PHE N A 4 PHE CA A 4 PHE C A 5 . N PSI -35.2 -60.2 -10.2
+      3 2 . A 4 . C A 5 VAL N A 5 VAL CA A 5 VAL C PHI -65.1 -90.1 -40.1
+      4 2 . A 5 VAL N A 5 VAL CA A 5 VAL C A 6 . N PSI -34.9 -59.9 -9.9
+      5 3 . A 5 . C A 6 LYS N A 6 LYS CA A 6 LYS C PHI -65.1 -90.1 -40.1
+      6 3 . A 6 LYS N A 6 LYS CA A 6 LYS C A 7 . N PSI -35.2 -60.2 -10.2
+      7 4 . A 6 . C A 7 THR N A 7 THR CA A 7 THR C PHI -65.0 -90.0 -40.0
+      8 4 . A 7 THR N A 7 THR CA A 7 THR C A 8 . N PSI -35.0 -60.0 -10.0
+      9 5 . A 7 . C A 8 LEU N A 8 LEU CA A 8 LEU C PHI -65.2 -90.2 -40.2
+      10 5 . A 8 LEU N A 8 LEU CA A 8 LEU C A 9 . N PSI -45.1 -70.1 -20.1
+      11 6 . A 8 . C A 9 THR N A 9 THR CA A 9 THR C PHI -65.1 -90.1 -40.1
+      12 6 . A 9 THR N A 9 THR CA A 9 THR C A 10 . N PSI -35.2 -60.2 -10.2
+      13 7 . A 9 . C A 10 GLY N A 10 GLY CA A 10 GLY C PHI -65.0 -90.0 -40.0
+      14 7 . A 10 GLY N A 10 GLY CA A 10 GLY C A 11 . N PSI -45.1 -70.1 -20.1
+
+   stop_
+save_

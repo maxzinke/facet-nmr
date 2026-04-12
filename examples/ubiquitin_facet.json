@@ -1,0 +1,126 @@
+{
+  "source": "examples\\ubiquitin.tab",
+  "n_residues": 10,
+  "residues": [
+    {
+      "seq_id": 1,
+      "comp_id": "MET",
+      "phi": -64.8,
+      "psi": -45.2,
+      "phi_err": 40.0,
+      "psi_err": 40.0,
+      "ss": "C",
+      "chi1": 2,
+      "confidence": -5.226,
+      "confidence_class": "Warn"
+    },
+    {
+      "seq_id": 2,
+      "comp_id": "GLN",
+      "phi": -64.6,
+      "psi": -44.9,
+      "phi_err": 40.0,
+      "psi_err": 40.0,
+      "ss": "C",
+      "chi1": 2,
+      "confidence": -5.37,
+      "confidence_class": "Warn"
+    },
+    {
+      "seq_id": 3,
+      "comp_id": "ILE",
+      "phi": -65.0,
+      "psi": -25.2,
+      "phi_err": 40.0,
+      "psi_err": 40.0,
+      "ss": "C",
+      "chi1": 1,
+      "confidence": -4.674,
+      "confidence_class": "Warn"
+    },
+    {
+      "seq_id": 4,
+      "comp_id": "PHE",
+      "phi": -65.3,
+      "psi": -35.2,
+      "phi_err": 25.0,
+      "psi_err": 25.0,
+      "ss": "H",
+      "chi1": 1,
+      "confidence": -4.397,
+      "confidence_class": "Good"
+    },
+    {
+      "seq_id": 5,
+      "comp_id": "VAL",
+      "phi": -65.1,
+      "psi": -34.9,
+      "phi_err": 25.0,
+      "psi_err": 25.0,
+      "ss": "H",
+      "chi1": 2,
+      "confidence": -3.536,
+      "confidence_class": "Good"
+    },
+    {
+      "seq_id": 6,
+      "comp_id": "LYS",
+      "phi": -65.1,
+      "psi": -35.2,
+      "phi_err": 25.0,
+      "psi_err": 25.0,
+      "ss": "H",
+      "chi1": 1,
+      "confidence": -3.56,
+      "confidence_class": "Good"
+    },
+    {
+      "seq_id": 7,
+      "comp_id": "THR",
+      "phi": -65.0,
+      "psi": -35.0,
+      "phi_err": 25.0,
+      "psi_err": 25.0,
+      "ss": "H",
+      "chi1": 1,
+      "confidence": -3.412,
+      "confidence_class": "Good"
+    },
+    {
+      "seq_id": 8,
+      "comp_id": "LEU",
+      "phi": -65.2,
+      "psi": -45.1,
+      "phi_err": 25.0,
+      "psi_err": 25.0,
+      "ss": "H",
+      "chi1": 1,
+      "confidence": -3.487,
+      "confidence_class": "Good"
+    },
+    {
+      "seq_id": 9,
+      "comp_id": "THR",
+      "phi": -65.1,
+      "psi": -35.2,
+      "phi_err": 25.0,
+      "psi_err": 25.0,
+      "ss": "H",
+      "chi1": 1,
+      "confidence": -3.676,
+      "confidence_class": "Good"
+    },
+    {
+      "seq_id": 10,
+      "comp_id": "GLY",
+      "phi": -65.0,
+      "psi": -45.1,
+      "phi_err": 25.0,
+      "psi_err": 25.0,
+      "ss": "H",
+      "chi1": null,
+      "confidence": -3.851,
+      "confidence_class": "Good"
+    }
+  ]
+}

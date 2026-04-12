@@ -1,0 +1,54 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "facet-nmr"
+version = "0.1.0"
+description = "Predict backbone torsion angles and secondary structure from NMR chemical shifts"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+authors = [
+    { name = "Maxim" },
+]
+keywords = ["NMR", "torsion angles", "protein", "backbone", "chemical shifts", "TALOS", "Ramachandran"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Scientific/Engineering :: Chemistry",
+]
+dependencies = [
+    "numpy>=1.24",
+    "torch>=2.0",
+]
+
+[project.optional-dependencies]
+onnx = [
+    "onnxruntime>=1.16",
+]
+bmrb = [
+    "httpx>=0.24",
+]
+plot = [
+    "matplotlib>=3.6",
+]
+all = [
+    "facet-nmr[onnx,bmrb,plot]",
+]
+
+[project.scripts]
+facet = "facet.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/bluegems661/facet-nmr"
+Documentation = "https://github.com/bluegems661/facet-nmr#readme"
+
+[tool.hatch.build.targets.wheel]
+packages = ["facet"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

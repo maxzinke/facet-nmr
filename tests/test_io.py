@@ -68,9 +68,9 @@ def _write_tmp(content: str, suffix: str) -> Path:
 def _sample_result() -> FACETResult:
     return FACETResult(
         residues=[
-            ResiduePrediction(1, "MET", -64.8, -45.2, -3.5, "Good", "H", chi1=1, phi_err=25.0, psi_err=25.0),
-            ResiduePrediction(2, "GLN", -65.0, -44.0, -4.0, "Strong", "H", chi1=2, phi_err=15.0, psi_err=15.0),
-            ResiduePrediction(3, "GLY", -80.0, 150.0, -5.5, "Warn", "C", chi1=None, phi_err=40.0, psi_err=40.0),
+            ResiduePrediction(1, "MET", -64.8, -45.2, -3.5, "Medium", "H", chi1=1, phi_err=22.0, psi_err=22.0),
+            ResiduePrediction(2, "GLN", -65.0, -44.0, -4.0, "High", "H", chi1=2, phi_err=16.0, psi_err=16.0),
+            ResiduePrediction(3, "GLY", -80.0, 150.0, -5.5, "Low", "C", chi1=None, phi_err=26.0, psi_err=26.0),
         ],
         source="test",
     )
@@ -304,7 +304,7 @@ class TestFACETResult:
         accepted = result.accepted()
         assert len(accepted) == 2  # Strong + Good
         classes = {r.confidence_class for r in accepted}
-        assert "Warn" not in classes
+        assert "Low" not in classes
 
     def test_summary(self):
         result = _sample_result()

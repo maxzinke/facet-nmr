@@ -73,18 +73,29 @@ Auto-detected from file content. NEF and NMR-STAR readers coming soon.
 | `.csv` | Custom pipelines | Comma-separated values |
 | `.json` | Programmatic access | Machine-readable |
 
-## Confidence Classes
+## Confidence Tiers
 
-FACET maps its internal confidence score (negative entropy of the coarse Ramachandran distribution) to TALOS-N-compatible labels:
+FACET assigns each residue to one of four tiers based on the entropy of
+its coarse Ramachandran distribution. Thresholds are calibrated from
+the v3 risk-coverage curve on a 26,944-residue held-out test set.
 
-| Class | Meaning | Use for restraints? |
-|---|---|---|
-| **Strong** | High confidence, narrow distribution | Yes |
-| **Good** | Moderate confidence | Yes |
-| **Warn** | Low confidence, interpret with caution | No (by default) |
-| **Dynamic** | Likely disordered or ambiguous | No |
+| Tier | Coverage | Fail25 | Restraint bound | Use for restraints? |
+|---|---|---|---|---|
+| **High** | top 30% | 8% | ±16° | Yes |
+| **Medium** | 30–60% | 15% | ±22° | Yes |
+| **Low** | 60–85% | 22% | ±26° | Interpret cautiously |
+| **Flexible** | bottom 15% | — | — | Biologically flexible / disordered |
 
-By default, only Strong and Good residues are included in restraint files (.tbl, .aco, .nef). Use `--include-all` to override.
+**Flexible is not a failure state** — it flags residues where the
+model correctly refuses to assign rigid phi/psi because the chemical
+shifts are consistent with conformational averaging (flexible loops,
+disordered tails, etc.). These residues should be excluded from
+structure-calculation restraints but their Flexible label is itself a
+meaningful biological signal.
+
+By default, only **High** and **Medium** residues are written to
+restraint files (`.tbl`, `.aco`, `.nef`). Use `--include-all` to
+include Low-tier residues as well.
 
 ## Model
 

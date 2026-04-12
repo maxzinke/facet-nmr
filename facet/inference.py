@@ -35,10 +35,10 @@ _MIN_RESIDUES = 3  # need at least 3 residues for a pentapeptide center + neighb
 from .io.formats import (
     BACKBONE_NUCLEI,
     CANONICAL_AA,
-    CONF_DYNAMIC,
-    CONF_GOOD,
-    CONF_STRONG,
-    CONF_WARN,
+    CONF_FLEXIBLE,
+    CONF_HIGH,
+    CONF_LOW,
+    CONF_MEDIUM,
     FACETResult,
     ResiduePrediction,
     ShiftList,
@@ -51,11 +51,11 @@ AA_TO_IDX = {aa: i + 1 for i, aa in enumerate(CANONICAL_AA)}
 # Aromatic AAs for the neighbor flag
 AROMATIC_AA = {"PHE", "TRP", "TYR", "HIS"}
 
-# Confidence thresholds calibrated from FACET v3 risk-coverage curve
-# on the 26,944-residue held-out test set (2026-04-12).
+# FACET confidence tiers — independently calibrated from the v3
+# risk-coverage curve on a 26,944-residue held-out test set (2026-04-12).
 #
 # Confidence = negative entropy of the 36x36 coarse Ramachandran grid.
-# Values are ordered from most confident (least negative) to least.
+# Sorted from most confident (least negative) to least.
 #
 # Coverage summary (cumulative, sorted by confidence descending):
 #   top 10%:  conf >= -3.02,  median 6.9°,  fail25  5.1%,  fail30  4.1%
@@ -63,41 +63,41 @@ AROMATIC_AA = {"PHE", "TRP", "TYR", "HIS"}
 #   top 60%:  conf >= -4.36,  median 10.8°, fail25 15.0%,  fail30 11.5%
 #   top 85%:  conf >= -5.02,  median 12.9°, fail25 22.0%,  fail30 17.3%
 #
-# Class mapping:
-#   STRONG (top 30%): comparable to TALOS-N Strong — 8% fail25, use for restraints
-#   GOOD (30-60%): moderate, 15% fail25 — still useful for structure calc
-#   WARN (60-85%): interpret cautiously, 22% fail25
-#   DYNAMIC (bottom 15%): likely disordered or ambiguous
+# Tier mapping:
+#   HIGH     (top 30%): 8% fail25 — safe for structure-calculation restraints
+#   MEDIUM   (30-60%): 15% fail25 — use with wider error bounds
+#   LOW      (60-85%): 22% fail25 — interpret cautiously
+#   FLEXIBLE (bottom 15%): biologically flexible / disordered regions
 _CONF_THRESHOLDS = [
-    (-3.72, CONF_STRONG),   # top 30%: fail25 ~8%
-    (-4.36, CONF_GOOD),     # top 60%: fail25 ~15%
-    (-5.02, CONF_WARN),     # top 85%: fail25 ~22%
+    (-3.72, CONF_HIGH),     # top 30%: fail25 ~8%
+    (-4.36, CONF_MEDIUM),   # top 60%: fail25 ~15%
+    (-5.02, CONF_LOW),      # top 85%: fail25 ~22%
 ]
-# Below all thresholds → Dynamic (bottom 15%)
+# Below all thresholds → Flexible (bottom 15%)
 
 
 def _classify_confidence(conf: float) -> str:
-    """Map negative-entropy confidence to a class label."""
+    """Map negative-entropy confidence to a tier label."""
     for threshold, label in _CONF_THRESHOLDS:
         if conf >= threshold:
             return label
-    return CONF_DYNAMIC
+    return CONF_FLEXIBLE
 
 
 def _estimate_error_bound(conf: float) -> float:
-    """Per-class error bound (degrees) for restraint generation.
+    """Per-tier error bound (degrees) for restraint generation.
 
     Derived from the test-set risk-coverage curve (2x the median error
-    within each tier, matching TALOS-N's convention of using 2x the
-    fit residual as the restraint half-width).
+    within each tier — the conventional half-width for dihedral
+    restraints in structure calculation).
     """
     if conf >= -3.72:
-        return 16.0  # STRONG: 2x median (8°)
+        return 16.0  # HIGH:   2x median (8°)
     elif conf >= -4.36:
-        return 22.0  # GOOD: 2x median (11°)
+        return 22.0  # MEDIUM: 2x median (11°)
     elif conf >= -5.02:
-        return 26.0  # WARN: 2x median (13°)
-    return 40.0  # DYNAMIC: wide bounds (if used at all)
+        return 26.0  # LOW:    2x median (13°)
+    return 40.0      # FLEXIBLE: wide bounds (usually not used for restraints)
 
 
 def _build_windows(

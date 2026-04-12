@@ -19,8 +19,8 @@ import json as json_mod
 from pathlib import Path
 
 from .formats import (
-    CONF_GOOD,
-    CONF_STRONG,
+    CONF_HIGH,
+    CONF_MEDIUM,
     FACETResult,
     ResiduePrediction,
 )

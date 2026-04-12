@@ -21,11 +21,16 @@ AA_ONE_TO_THREE = {
 }
 AA_THREE_TO_ONE = {v: k for k, v in AA_ONE_TO_THREE.items()}
 
-# Confidence classes (TALOS-N-compatible naming)
-CONF_STRONG = "Strong"
-CONF_GOOD = "Good"
-CONF_WARN = "Warn"
-CONF_DYNAMIC = "Dynamic"
+# Confidence classes — FACET's own tiers, independently calibrated from
+# the v3 risk-coverage curve. Not borrowed from TALOS-N vocabulary.
+#   High:     confident rigid geometry — use for restraints
+#   Medium:   moderate confidence — use cautiously
+#   Low:      uncertain — interpret with care
+#   Flexible: biologically flexible / disordered region (NOT a failure)
+CONF_HIGH = "High"
+CONF_MEDIUM = "Medium"
+CONF_LOW = "Low"
+CONF_FLEXIBLE = "Flexible"
 
 
 @dataclass
@@ -106,14 +111,18 @@ class FACETResult:
     def n_residues(self) -> int:
         return len(self.residues)
 
-    def strong(self) -> list[ResiduePrediction]:
-        """Residues with Strong confidence."""
-        return [r for r in self.residues if r.confidence_class == CONF_STRONG]
+    def high(self) -> list[ResiduePrediction]:
+        """Residues with High confidence (narrowest restraints, safest use)."""
+        return [r for r in self.residues if r.confidence_class == CONF_HIGH]
 
     def accepted(self) -> list[ResiduePrediction]:
-        """Residues with Strong or Good confidence (use for restraints)."""
+        """Residues with High or Medium confidence (use for restraints)."""
         return [r for r in self.residues
-                if r.confidence_class in (CONF_STRONG, CONF_GOOD)]
+                if r.confidence_class in (CONF_HIGH, CONF_MEDIUM)]
+
+    def flexible(self) -> list[ResiduePrediction]:
+        """Residues flagged as flexible / disordered."""
+        return [r for r in self.residues if r.confidence_class == CONF_FLEXIBLE]
 
     def to_tbl(self, path: str, **kw) -> None:
         """Write XPLOR/CNS .tbl restraints."""
@@ -157,9 +166,13 @@ class FACETResult:
                 f"  {r.seq_id:5d} {r.comp_id:>4s} {r.phi:8.1f} {r.psi:8.1f} "
                 f"{r.phi_err:6.1f} {r.psi_err:6.1f} {r.ss:>3s} {r.confidence_class:>8s}"
             )
-        n_strong = len(self.strong())
+        n_high = len(self.high())
         n_accepted = len(self.accepted())
+        n_flexible = len(self.flexible())
         lines.append("")
-        lines.append(f"  Strong: {n_strong} ({100*n_strong/max(self.n_residues,1):.0f}%)  "
-                      f"Accepted: {n_accepted} ({100*n_accepted/max(self.n_residues,1):.0f}%)")
+        lines.append(
+            f"  High: {n_high} ({100*n_high/max(self.n_residues,1):.0f}%)  "
+            f"Accepted: {n_accepted} ({100*n_accepted/max(self.n_residues,1):.0f}%)  "
+            f"Flexible: {n_flexible} ({100*n_flexible/max(self.n_residues,1):.0f}%)"
+        )
         return "\n".join(lines)

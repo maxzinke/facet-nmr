@@ -105,9 +105,10 @@ def _cmd_predict(args) -> None:
     )
 
     n_accepted = len(result.accepted())
-    n_strong = len(result.strong())
-    logger.info("Predicted %d residues: %d Strong, %d Accepted",
-                result.n_residues, n_strong, n_accepted)
+    n_high = len(result.high())
+    n_flexible = len(result.flexible())
+    logger.info("Predicted %d residues: %d High, %d Accepted, %d Flexible",
+                result.n_residues, n_high, n_accepted, n_flexible)
 
     accepted_only = not args.include_all
 

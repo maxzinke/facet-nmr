@@ -35,8 +35,8 @@ from .io.formats import AA_THREE_TO_ONE, FACETResult, ResiduePrediction
 # so the three semantic roles (confidence / strand / helix) each have
 # their own visually unambiguous color.
 COLOR_BAR = "#566573"           # slate gray — confidence bars
-COLOR_BAR_DYNAMIC = "#1ABC9C"   # teal — dynamic / flexible residues
-COLOR_THRESHOLD = "#7F8C8D"     # mid-gray — "Strong" dashed reference
+COLOR_FLEXIBLE = "#1ABC9C"      # teal — flexible / disordered residues
+COLOR_THRESHOLD = "#7F8C8D"     # mid-gray — "High tier" dashed reference
 COLOR_HELIX = "#C0392B"         # red — alpha helix (convention)
 COLOR_STRAND = "#1F3A5F"        # navy — beta strand (convention)
 COLOR_BASELINE = "#95A5A6"      # light gray — coil baseline line
@@ -52,9 +52,9 @@ MIN_STRAND_LEN = 2  # β-strand = ≥2 to distinguish from isolated H-bond
 # range on calibrated FACET v3 is [-5.2, -3.0]. Using the empirical
 # range gives bars with visible dynamic range instead of all bunched
 # near the top.
-CONF_MIN = -5.2                # bottom 10% of valid predictions
-CONF_MAX = -2.5                # top 10% of valid predictions
-CONF_STRONG_THRESHOLD = -3.72  # top 30% (Strong tier, 8.2% fail25)
+CONF_MIN = -5.2              # bottom 10% of valid predictions
+CONF_MAX = -2.5              # top 10% of valid predictions
+CONF_HIGH_THRESHOLD = -3.72  # High tier cutoff (8.2% fail25)
 
 # Vertical layout — strict layering with clear gaps
 Y_BAR_BASE = 3.6
@@ -217,15 +217,15 @@ def plot_sequence_ss(
         # ── Layer 1: confidence bars ──
         bar_range = Y_BAR_TOP - Y_BAR_BASE
         bar_heights = []
-        is_dynamic = []
+        is_flexible = []
         for r in row_residues:
-            if r.confidence_class == "Dynamic":
+            if r.confidence_class == "Flexible":
                 bar_heights.append(0.0)
-                is_dynamic.append(True)
+                is_flexible.append(True)
             else:
                 h = _normalize_confidence(r.confidence) * bar_range
                 bar_heights.append(h)
-                is_dynamic.append(False)
+                is_flexible.append(False)
 
         # Main bars (uniform charcoal color)
         ax.bar(
@@ -237,25 +237,25 @@ def plot_sequence_ss(
             zorder=2,
         )
 
-        # Dynamic residues: gray "×" where the bar would be — clearly
-        # distinguishable from a low-confidence short bar (which is a
-        # prediction we trust less, not one we refuse to make).
-        dyn_x = [i for i, d in enumerate(is_dynamic) if d]
-        if dyn_x:
+        # Flexible residues: teal "×" where the bar would be — clearly
+        # distinguishable from a low-confidence short bar. "Flexible"
+        # means biologically disordered, not a model failure.
+        flex_x = [i for i, f in enumerate(is_flexible) if f]
+        if flex_x:
             ax.scatter(
-                dyn_x,
-                [Y_BAR_BASE + 0.25] * len(dyn_x),
+                flex_x,
+                [Y_BAR_BASE + 0.25] * len(flex_x),
                 s=40,
-                color=COLOR_BAR_DYNAMIC,
+                color=COLOR_FLEXIBLE,
                 marker="x",
                 linewidths=1.5,
                 zorder=2,
             )
 
-        # Strong threshold dashed reference line
-        strong_norm = _normalize_confidence(CONF_STRONG_THRESHOLD) * bar_range
+        # High-tier threshold dashed reference line
+        high_norm = _normalize_confidence(CONF_HIGH_THRESHOLD) * bar_range
         ax.axhline(
-            Y_BAR_BASE + strong_norm,
+            Y_BAR_BASE + high_norm,
             xmin=0, xmax=1,
             linestyle=(0, (2, 3)),
             color=COLOR_THRESHOLD,
@@ -335,19 +335,18 @@ def plot_sequence_ss(
     fig.suptitle(title, fontsize=12, y=0.99, fontweight="bold", color=COLOR_SEQ)
 
     # Legend at bottom — keeps the title band clean.
-    # "Dynamic" = flexible / disordered regions. This is not a model
-    # failure — intrinsically disordered tails and loops are real
-    # biological features that FACET correctly flags rather than
+    # "Flexible" = biologically disordered region (real feature, not
+    # a model failure). FACET correctly flags these rather than
     # assigning spurious rigid angles.
     from matplotlib.patches import Patch
     from matplotlib.lines import Line2D
     handles = [
         Patch(facecolor=COLOR_BAR, label="Confidence"),
         Line2D([0], [0], linestyle=(0, (2, 3)), color=COLOR_THRESHOLD,
-               linewidth=1.2, label="Strong threshold"),
-        Line2D([0], [0], marker="x", color=COLOR_BAR_DYNAMIC,
+               linewidth=1.2, label="High-tier threshold"),
+        Line2D([0], [0], marker="x", color=COLOR_FLEXIBLE,
                markersize=7, linewidth=0, markeredgewidth=1.8,
-               label="Dynamic"),
+               label="Flexible"),
         Patch(facecolor=COLOR_HELIX, label="α helix"),
         Patch(facecolor=COLOR_STRAND, label="β strand"),
     ]

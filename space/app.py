@@ -112,7 +112,7 @@ def predict_and_format(file_obj, output_formats: list[str]):
 
 def _plot_ramachandran(result):
     """Ramachandran plot colored by SS and sized by confidence."""
-    from facet.io.formats import CONF_STRONG, CONF_GOOD
+    from facet.io.formats import CONF_HIGH, CONF_MEDIUM
 
     fig, ax = plt.subplots(1, 1, figsize=(6, 6))
 
@@ -126,11 +126,11 @@ def _plot_ramachandran(result):
         phi = [r.phi for r in residues]
         psi = [r.psi for r in residues]
         sizes = [
-            40 if r.confidence_class in (CONF_STRONG, CONF_GOOD) else 15
+            40 if r.confidence_class in (CONF_HIGH, CONF_MEDIUM) else 15
             for r in residues
         ]
         alpha = [
-            0.8 if r.confidence_class in (CONF_STRONG, CONF_GOOD) else 0.3
+            0.8 if r.confidence_class in (CONF_HIGH, CONF_MEDIUM) else 0.3
             for r in residues
         ]
         ax.scatter(phi, psi, c=ss_colors[ss], s=sizes, alpha=alpha,

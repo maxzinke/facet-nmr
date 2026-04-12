@@ -186,6 +186,7 @@ demo = gr.Interface(
     examples=[
         ["examples/ubiquitin.tab", ["XPLOR .tbl", "CYANA .aco", "pred.tab"]],
     ],
+    cache_examples=False,
     flagging_mode="never",
 )
 

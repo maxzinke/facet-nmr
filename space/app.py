@@ -24,16 +24,18 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-# Add parent dir so `import facet` works in the Space environment
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+# Add this dir so `import facet` works (facet/ is a sibling of app.py)
+_HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(_HERE))
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 logger = logging.getLogger("facet-space")
 
-# Model checkpoint — set FACET_CHECKPOINT env var or place in default location
+# Model checkpoint — bundled in the Space at facet/weights/facet_v3.pt,
+# or override via FACET_CHECKPOINT env var.
 CHECKPOINT = os.environ.get(
     "FACET_CHECKPOINT",
-    str(Path.home() / ".facet" / "facet_v3.pt"),
+    str(_HERE / "facet" / "weights" / "facet_v3.pt"),
 )
 
 # Cache the model after first load

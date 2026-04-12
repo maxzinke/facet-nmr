@@ -190,15 +190,23 @@ def read_auto(path: str | Path) -> ShiftList:
     if suffix in (".str", ".bmrb"):
         return read_nmrstar(path)
 
-    # Sniff content
-    text = path.read_text(errors="replace")[:2000]
+    # Sniff content — read full file for STAR format detection since the
+    # _Atom_chem_shift loop may be deep in the file
+    text = path.read_text(errors="replace")
+    head = text[:2000]
+
+    # STAR markers (NEF and NMR-STAR share the data_/save_/loop_ syntax)
     if "nef_chemical_shift" in text:
         return read_nef(path)
     if "_Atom_chem_shift" in text:
         return read_nmrstar(path)
-    if "VARS" in text or "FORMAT" in text:
+    # Generic STAR format with data_ header → probably NMR-STAR
+    if head.lstrip().startswith("data_"):
+        return read_nmrstar(path)
+
+    if "VARS" in head or "FORMAT" in head:
         return read_tab(path)
-    if "," in text.split("\n")[0]:
+    if "," in head.split("\n")[0]:
         return read_csv(path)
 
     # Default to tab

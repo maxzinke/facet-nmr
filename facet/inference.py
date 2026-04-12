@@ -200,6 +200,9 @@ def predict(
     Returns:
         FACETResult with per-residue phi, psi, confidence, SS, chi1.
     """
+    import logging
+    logger = logging.getLogger("facet")
+
     # Load shift list
     if isinstance(input_, ShiftList):
         shift_list = input_
@@ -208,6 +211,52 @@ def predict(
         shift_list = read_auto(input_)
 
     shifts, masks, comp_ids, seq_ids = shift_list.to_arrays()
+
+    # ── Validate AA composition ──
+    unknown_aas = [c for c in comp_ids if c not in CANONICAL_AA]
+    n_unknown = len(unknown_aas)
+    if n_unknown > 0:
+        unknown_set = sorted(set(unknown_aas))
+        frac = n_unknown / len(comp_ids)
+        msg = (
+            f"{n_unknown}/{len(comp_ids)} residues ({100*frac:.0f}%) use "
+            f"non-canonical amino acids not supported by FACET: "
+            f"{unknown_set[:10]}{'...' if len(unknown_set) > 10 else ''}. "
+            f"FACET is trained on the 20 standard proteinogenic AAs only."
+        )
+        if frac > 0.5:
+            raise ValueError(
+                msg + "\n\nThis file appears to contain a synthetic peptide "
+                "with xeno or modified amino acids. FACET cannot predict "
+                "torsion angles for these residues — the model has not been "
+                "trained on their chemistry. Please use a standard-AA "
+                "protein or a method designed for xeno peptides."
+            )
+        else:
+            logger.warning(msg)
+            logger.warning(
+                "Non-canonical residues will be assigned Dynamic confidence "
+                "and should not be used for structure calculation."
+            )
+
+    # ── Validate shift coverage ──
+    # FACET needs heavy atoms (N, CA, CB, C) — proton-only data is insufficient
+    # Column order: H, HA, N, CA, CB, C
+    heavy_mask = masks[:, 2:].sum(axis=1)  # N, CA, CB, C observed count
+    n_heavy_starved = int((heavy_mask < 1).sum())
+    if n_heavy_starved > len(comp_ids) * 0.5:
+        raise ValueError(
+            f"{n_heavy_starved}/{len(comp_ids)} residues have no heavy-atom "
+            f"(N/CA/CB/C') shifts. FACET requires at least one heavy-atom "
+            f"chemical shift per residue — proton-only assignments (H/HA) "
+            f"are insufficient to predict backbone torsion angles. "
+            f"This dataset appears to contain only 1H assignments."
+        )
+    if n_heavy_starved > 0:
+        logger.warning(
+            "%d residues have no heavy-atom shifts — predictions will be poor",
+            n_heavy_starved,
+        )
 
     # Convert to secondary shifts
     sec_shifts = to_secondary_shifts(shifts, masks, comp_ids)

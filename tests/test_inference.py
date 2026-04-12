@@ -37,6 +37,39 @@ class TestRandomCoil:
         assert np.all(sec == 0.0)
 
 
+class TestValidation:
+    """Input validation in predict() — non-canonical AAs, missing heavy atoms."""
+
+    def test_noncanonical_aas_rejected(self):
+        """Synthetic peptide with xeno AAs should raise ValueError."""
+        from facet import predict
+        from facet.io.formats import Residue, ShiftList
+
+        residues = [
+            Residue(1, "NVA", {"H": 8.0, "HA": 4.0, "N": 120.0, "CA": 55.0}),
+            Residue(2, "CGU", {"H": 8.1, "HA": 4.1, "N": 121.0, "CA": 56.0}),
+            Residue(3, "7C9", {"H": 8.2, "HA": 4.2, "N": 122.0, "CA": 57.0}),
+        ]
+        sl = ShiftList(residues=residues)
+        # Should raise before even loading the model (no checkpoint arg needed)
+        with pytest.raises(ValueError, match="non-canonical amino acids"):
+            predict(sl, checkpoint="does-not-exist.pt")
+
+    def test_proton_only_rejected(self):
+        """Dataset with only H/HA observed should raise ValueError."""
+        from facet import predict
+        from facet.io.formats import Residue, ShiftList
+
+        # Standard AAs but only H and HA — should fail heavy-atom check
+        residues = [
+            Residue(i + 1, "ALA", {"H": 8.0 + i * 0.01, "HA": 4.0})
+            for i in range(10)
+        ]
+        sl = ShiftList(residues=residues)
+        with pytest.raises(ValueError, match="heavy-atom"):
+            predict(sl, checkpoint="does-not-exist.pt")
+
+
 class TestShiftList:
     def test_to_arrays(self):
         sl = ShiftList(residues=[

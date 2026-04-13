@@ -2,7 +2,7 @@
 
 Usage::
 
-    # Predict from TALOS-N tab file (default: outputs .tbl + .aco + pred.tab)
+    # Predict from a .tab shift list (default: outputs .tbl + .aco + pred.tab)
     facet predict shifts.tab
 
     # Specific output format

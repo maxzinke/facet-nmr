@@ -1,7 +1,7 @@
 """Input format readers for FACET.
 
 Supported formats:
-  - TALOS-N .tab (NMRPipe convention)
+  - NMRPipe .tab shift list
   - Simple CSV (ResID, AA, H, HA, N, CA, CB, C)
   - Auto-detection from file content
 """
@@ -15,7 +15,7 @@ from .nmrstar import read_nmrstar
 
 
 def read_tab(path: str | Path) -> ShiftList:
-    """Read a TALOS-N / NMRPipe .tab shift list.
+    """Read a .tab shift list (NMRPipe convention).
 
     Expected format::
 
@@ -27,7 +27,7 @@ def read_tab(path: str | Path) -> ShiftList:
         1 M N 120.5
         ...
 
-    Also handles the condensed TALOS-N input format::
+    Also handles the condensed input format::
 
         VARS   RESID RESNAME C CA CB HA H N
         FORMAT %4d %s %8.3f %8.3f %8.3f %8.3f %8.3f %8.3f
@@ -90,7 +90,7 @@ def read_tab(path: str | Path) -> ShiftList:
         if vars_fields:
             col_map = {name: i for i, name in enumerate(vars_fields)}
         else:
-            # Guess: RESID RESNAME C CA CB HA H N (TALOS-N default)
+            # Guess: RESID RESNAME C CA CB HA H N (canonical column order)
             col_map = {"RESID": 0, "RESNAME": 1, "C": 2, "CA": 3,
                         "CB": 4, "HA": 5, "H": 6, "N": 7}
 
@@ -112,7 +112,7 @@ def read_tab(path: str | Path) -> ShiftList:
                 if idx is not None and idx < len(parts):
                     try:
                         val = float(parts[idx])
-                        if val != 9999.0:  # TALOS convention for missing
+                        if val != 9999.0:  # 9999.0 sentinel for missing
                             res.shifts[nuc] = val
                     except ValueError:
                         pass
@@ -173,7 +173,7 @@ def read_auto(path: str | Path) -> ShiftList:
 
     Detection heuristic:
       - .csv → CSV
-      - .tab → TALOS-N tab
+      - .tab → NMRPipe tab
       - .nef → NEF
       - .str → NMR-STAR (if pynmrstar available)
       - Otherwise: sniff content for format markers

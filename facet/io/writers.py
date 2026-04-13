@@ -4,7 +4,7 @@ Supported formats:
   - XPLOR/CNS .tbl   (XPLOR-NIH, CNS, HADDOCK, ARIA)
   - CYANA .aco        (CYANA angle constraints)
   - NEF .nef          (wwPDB NMR Exchange Format dihedral restraints)
-  - pred.tab          (TALOS-N-style summary table)
+  - pred.tab          (per-residue summary table)
   - CSV               (simple comma-separated)
   - JSON              (machine-readable)
 
@@ -246,13 +246,13 @@ def write_nef(
     return out
 
 
-# ─────────────────────── pred.tab (TALOS-N style) ───────────────
+# ─────────────────────── pred.tab summary ──────────────────────
 
 def write_predtab(
     result: FACETResult,
     path: str | Path,
 ) -> Path:
-    """Write TALOS-N-style prediction summary.
+    """Write per-residue prediction summary table.
 
     Format::
 

@@ -21,8 +21,7 @@ AA_ONE_TO_THREE = {
 }
 AA_THREE_TO_ONE = {v: k for k, v in AA_ONE_TO_THREE.items()}
 
-# Confidence classes — FACET's own tiers, independently calibrated from
-# the v3 risk-coverage curve. Not borrowed from TALOS-N vocabulary.
+# Confidence classes — independently calibrated from the v3 risk-coverage curve.
 #   High:     confident rigid geometry — use for restraints
 #   Medium:   moderate confidence — use cautiously
 #   Low:      uncertain — interpret with care
@@ -140,7 +139,7 @@ class FACETResult:
         write_nef(self, path, **kw)
 
     def to_predtab(self, path: str, **kw) -> None:
-        """Write TALOS-N-style pred.tab summary."""
+        """Write pred.tab summary table."""
         from .writers import write_predtab
         write_predtab(self, path, **kw)
 
@@ -155,16 +154,18 @@ class FACETResult:
         write_json(self, path, **kw)
 
     def summary(self) -> str:
-        """Print a TALOS-N-style summary to string."""
+        """Format a per-residue prediction summary as a plain-text table."""
+        CHI1_NAMES = {0: "g+", 1: "g-", 2: "t"}
         lines = [
             f"FACET prediction: {self.n_residues} residues from {self.source}",
             "",
-            f"  {'ResID':>5s} {'AA':>4s} {'PHI':>8s} {'PSI':>8s} {'dPHI':>6s} {'dPSI':>6s} {'SS':>3s} {'Class':>8s}",
+            f"  {'ResID':>5s} {'AA':>4s} {'PHI':>8s} {'PSI':>8s} {'dPHI':>6s} {'dPSI':>6s} {'SS':>3s} {'CHI1':>5s} {'Class':>8s}",
         ]
         for r in self.residues:
+            chi1_str = CHI1_NAMES.get(r.chi1, ".") if r.chi1 is not None else "."
             lines.append(
                 f"  {r.seq_id:5d} {r.comp_id:>4s} {r.phi:8.1f} {r.psi:8.1f} "
-                f"{r.phi_err:6.1f} {r.psi_err:6.1f} {r.ss:>3s} {r.confidence_class:>8s}"
+                f"{r.phi_err:6.1f} {r.psi_err:6.1f} {r.ss:>3s} {chi1_str:>5s} {r.confidence_class:>8s}"
             )
         n_high = len(self.high())
         n_accepted = len(self.accepted())

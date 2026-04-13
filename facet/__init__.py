@@ -1,8 +1,7 @@
 """FACET: Fold And Conformation Estimation Tool.
 
 Predict backbone torsion angles, secondary structure, and chi1 rotamers
-from NMR chemical shifts. Surpasses TALOS-N on 27,461 matched residues
-(13.4 vs 14.4 deg median error).
+from NMR chemical shifts.
 
 Quick start::
 

@@ -42,7 +42,7 @@ CHECKPOINT = os.environ.get(
 
 # ─────────────────── Constants ────────────────────────────────
 
-SS_COLORS = {"H": "#C0392B", "E": "#1F3A5F", "C": "#7F8C8D"}
+SS_COLORS = {"H": "#C0392B", "E": "#1F3A5F", "C": "#95A5A6"}
 SS_NAMES = {"H": "α-Helix", "E": "β-Strand", "C": "Coil"}
 
 CHI1_NAMES_FULL = {0: "g+ (gauche+)", 1: "g- (gauche-)", 2: "t (trans)"}
@@ -256,6 +256,58 @@ def build_residue_ramachandran(result, selected_seq_id):
         )
     )
 
+    # Neighbor strip: i-2..i+2 walk centered on the selected residue.
+    sel_idx = next(
+        (k for k, r in enumerate(result.residues) if r.seq_id == selected_seq_id),
+        None,
+    )
+    if sel_idx is not None:
+        walk_phis: list[float] = []
+        walk_psis: list[float] = []
+        neighbor_phis: list[float] = []
+        neighbor_psis: list[float] = []
+        neighbor_hover: list[str] = []
+        for offset in (-2, -1, 0, 1, 2):
+            ni = sel_idx + offset
+            if 0 <= ni < len(result.residues):
+                nr = result.residues[ni]
+                walk_phis.append(nr.phi)
+                walk_psis.append(nr.psi)
+                if offset != 0:
+                    neighbor_phis.append(nr.phi)
+                    neighbor_psis.append(nr.psi)
+                    neighbor_hover.append(
+                        f"{nr.seq_id} {nr.comp_id} (i{offset:+d})<br>"
+                        f"phi={nr.phi:.0f}°, psi={nr.psi:.0f}°"
+                    )
+        if len(walk_phis) > 1:
+            fig.add_trace(
+                go.Scatter(
+                    x=walk_phis,
+                    y=walk_psis,
+                    mode="lines",
+                    line=dict(color="#888888", width=1, dash="dot"),
+                    hoverinfo="skip",
+                    showlegend=False,
+                )
+            )
+        if neighbor_phis:
+            fig.add_trace(
+                go.Scatter(
+                    x=neighbor_phis,
+                    y=neighbor_psis,
+                    mode="markers",
+                    marker=dict(
+                        color="#cccccc",
+                        size=10,
+                        line=dict(color="#666666", width=1.2),
+                    ),
+                    text=neighbor_hover,
+                    hoverinfo="text",
+                    showlegend=False,
+                )
+            )
+
     fig.add_trace(
         go.Scatter(
             x=[selected.phi],
@@ -385,6 +437,20 @@ def build_inspector_markdown(result, selected_seq_id, shift_list):
         "outlier": "outside the 99% density (potential outlier)",
     }.get(outlier, outlier)
 
+    chi1_probs_section = ""
+    if selected.chi1_probs is not None:
+        names = ["g+", "g-", "t "]
+        bar_lines = []
+        for name, p in zip(names, selected.chi1_probs):
+            width = int(round(p * 20))
+            bar = "█" * width + "░" * (20 - width)
+            bar_lines.append(f"{name}  {bar}  {p * 100:4.1f}%")
+        chi1_probs_section = (
+            "\n\n**χ1 rotamer probabilities:**\n```\n"
+            + "\n".join(bar_lines)
+            + "\n```"
+        )
+
     return f"""### Residue **{selected.seq_id} {selected.comp_id}**
 
 | | |
@@ -396,7 +462,7 @@ def build_inspector_markdown(result, selected_seq_id, shift_list):
 | **Confidence** | {selected.confidence_class} |
 | **Region** | {region} |
 | **Density** | {outlier_text} |
-"""
+{chi1_probs_section}"""
 
 
 def build_shifts_table(shift_list, selected_seq_id):
@@ -414,7 +480,7 @@ def build_shifts_table(shift_list, selected_seq_id):
 # ─────────────────── Predict callback ─────────────────────────
 
 
-def predict_and_format(file_obj, bmrb_id, deuteration, output_formats):
+def predict_and_format(file_obj, bmrb_id, deuteration, output_formats, progress=gr.Progress()):
     if not file_obj and not (bmrb_id and bmrb_id.strip()):
         raise gr.Error("Upload a shift list or enter a BMRB entry ID.")
 
@@ -452,6 +518,7 @@ def predict_and_format(file_obj, bmrb_id, deuteration, output_formats):
         stem = Path(input_path).stem
         input_label = stem
 
+    progress(0.2, desc="Running FACET model")
     try:
         result = predict(
             predict_input,
@@ -462,6 +529,7 @@ def predict_and_format(file_obj, bmrb_id, deuteration, output_formats):
     except Exception as e:
         raise gr.Error(f"Prediction failed: {e}")
 
+    progress(0.6, desc="Building figures")
     seq_path = os.path.join(tempfile.gettempdir(), f"facet_seq_ss_{stem}.png")
     try:
         fig_seq = plot_sequence_ss(
@@ -477,6 +545,7 @@ def predict_and_format(file_obj, bmrb_id, deuteration, output_formats):
     )
     table_rows = result_to_table(result)
 
+    progress(0.85, desc="Writing output files")
     tmpdir = tempfile.mkdtemp(prefix="facet_")
     output_files = []
     writer_map = {
@@ -512,6 +581,24 @@ def predict_and_format(file_obj, bmrb_id, deuteration, output_formats):
     )
     if deuteration and deuteration != "protonated":
         status_md += f"  ·  _¹³C corrected for {deuteration.replace('_', ' ')}_"
+    else:
+        # Heuristic: flag likely-deuterated samples when user picked protonated.
+        try:
+            from facet.random_coil import to_secondary_shifts
+            _shifts_r, _masks_r, _comp_ids_r, _ = shift_list.to_arrays()
+            _sec = to_secondary_shifts(_shifts_r, _masks_r, _comp_ids_r)
+            _ca_n = float(_masks_r[:, 3].sum())
+            if _ca_n >= 10:
+                _mean_ca = float((_sec[:, 3] * _masks_r[:, 3]).sum() / _ca_n)
+                if _mean_ca < -0.20:
+                    status_md += (
+                        f"  ·  **Note:** CA shifts sit ~{abs(_mean_ca):.2f} ppm "
+                        "upfield of typical protonated random-coil values — "
+                        "is this a perdeuterated sample? Try the "
+                        "_Perdeuterated_ preset for correction."
+                    )
+        except Exception:
+            pass
 
     return (
         result,
@@ -624,12 +711,17 @@ def build_demo():
                         label="Sample deuteration",
                         info="Applies ¹³C isotope shift correction. Use Perdeuterated for TROSY samples.",
                     )
-                    format_choices = gr.CheckboxGroup(
-                        choices=FORMAT_CHOICES,
-                        value=["XPLOR .tbl", "CYANA .aco", "pred.tab"],
-                        label="Output formats",
+                    predict_btn = gr.Button(
+                        "Predict & Download All", variant="primary"
                     )
-                    predict_btn = gr.Button("Predict", variant="primary")
+                    with gr.Accordion(
+                        "Advanced: select output formats", open=False
+                    ):
+                        format_choices = gr.CheckboxGroup(
+                            choices=FORMAT_CHOICES,
+                            value=FORMAT_CHOICES,
+                            label="",
+                        )
 
                 gr.Markdown("---")
                 gr.Markdown(
@@ -640,7 +732,10 @@ def build_demo():
 
             with gr.Column(scale=4):
 
-                status_bar = gr.Markdown("*Run a prediction to begin.*")
+                status_bar = gr.Markdown(
+                    "*Upload a shift list, enter a BMRB ID, or try the "
+                    "ubiquitin example below — then click Predict.*"
+                )
 
                 sequence_plot = gr.Image(
                     label="Sequence + Secondary Structure  (download for figures)",

@@ -534,6 +534,7 @@ class FACETv3(nn.Module):
             "psi": psi,
             "ss_pred": out["ss_logits"].argmax(dim=-1),
             "chi1_pred": out["chi1_logits"].argmax(dim=-1),
+            "chi1_probs": F.softmax(out["chi1_logits"], dim=-1),
             "confidence": out["confidence"],
             "coarse_probs": out["coarse_probs"],
         }

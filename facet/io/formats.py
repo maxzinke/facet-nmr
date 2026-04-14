@@ -92,11 +92,12 @@ class ResiduePrediction:
     phi: float  # degrees
     psi: float  # degrees
     confidence: float  # higher = more confident (negative coarse entropy)
-    confidence_class: str  # Strong / Good / Warn / Dynamic
+    confidence_class: str  # High / Medium / Low / Flexible
     ss: str  # H / E / C
     chi1: int | None = None  # 0=g+, 1=g-, 2=trans, None=undefined
     phi_err: float = 0.0  # estimated error bound (degrees)
     psi_err: float = 0.0
+    chi1_probs: tuple[float, float, float] | None = None  # softmax over (g+, g-, t)
 
 
 @dataclass

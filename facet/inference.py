@@ -386,6 +386,8 @@ def predict(
     all_conf = np.zeros(n, dtype=np.float64)
     all_ss = np.zeros(n, dtype=np.int64)
     all_chi1 = np.zeros(n, dtype=np.int64)
+    all_chi1_probs = np.zeros((n, 3), dtype=np.float32)
+    has_chi1_probs = False
 
     for start in range(0, n, batch_size):
         end = min(start + batch_size, n)
@@ -404,6 +406,9 @@ def predict(
         all_ss[start:end] = out["ss_pred"].cpu().numpy()
         if "chi1_pred" in out:
             all_chi1[start:end] = out["chi1_pred"].cpu().numpy()
+        if "chi1_probs" in out:
+            all_chi1_probs[start:end] = out["chi1_probs"].cpu().numpy()
+            has_chi1_probs = True
 
     # Build result
     SS_LABELS = {0: "H", 1: "E", 2: "C"}
@@ -411,6 +416,7 @@ def predict(
     for i in range(n):
         conf = float(all_conf[i])
         err_bound = _estimate_error_bound(conf)
+        has_chi1 = comp_ids[i] not in ("GLY", "ALA")
         residues.append(ResiduePrediction(
             seq_id=seq_ids[i],
             comp_id=comp_ids[i],
@@ -419,9 +425,15 @@ def predict(
             confidence=conf,
             confidence_class=_classify_confidence(conf),
             ss=SS_LABELS.get(int(all_ss[i]), "C"),
-            chi1=int(all_chi1[i]) if comp_ids[i] not in ("GLY", "ALA") else None,
+            chi1=int(all_chi1[i]) if has_chi1 else None,
             phi_err=err_bound,
             psi_err=err_bound,
+            chi1_probs=(
+                (float(all_chi1_probs[i, 0]),
+                 float(all_chi1_probs[i, 1]),
+                 float(all_chi1_probs[i, 2]))
+                if has_chi1 and has_chi1_probs else None
+            ),
         ))
 
     return FACETResult(residues=residues, source=shift_list.source)

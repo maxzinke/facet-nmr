@@ -582,21 +582,52 @@ def predict_and_format(file_obj, bmrb_id, deuteration, output_formats, progress=
     if deuteration and deuteration != "protonated":
         status_md += f"  ·  _¹³C corrected for {deuteration.replace('_', ' ')}_"
     else:
-        # Heuristic: flag likely-deuterated samples when user picked protonated.
+        # SS-aware deuteration heuristic: the raw mean CA shift is
+        # confounded by the protein's actual secondary-structure
+        # composition (helix-heavy proteins naturally sit high, strand-
+        # heavy proteins naturally sit low). Subtract the expected
+        # secondary shift for each residue's predicted SS state and
+        # look at the residual bias on CA AND CB. Require statistical
+        # significance (z < -2 against within-sample spread) so small
+        # noisy samples cannot fire on ordinary reference mismatch.
         try:
             from facet.random_coil import to_secondary_shifts
-            _shifts_r, _masks_r, _comp_ids_r, _ = shift_list.to_arrays()
-            _sec = to_secondary_shifts(_shifts_r, _masks_r, _comp_ids_r)
-            _ca_n = float(_masks_r[:, 3].sum())
-            if _ca_n >= 10:
-                _mean_ca = float((_sec[:, 3] * _masks_r[:, 3]).sum() / _ca_n)
-                if _mean_ca < -0.20:
-                    status_md += (
-                        f"  ·  **Note:** CA shifts sit ~{abs(_mean_ca):.2f} ppm "
-                        "upfield of typical protonated random-coil values — "
-                        "is this a perdeuterated sample? Try the "
-                        "_Perdeuterated_ preset for correction."
+            _raw, _masks_r, _comp_ids_r, _ = shift_list.to_arrays()
+            _sec = to_secondary_shifts(_raw, _masks_r, _comp_ids_r)
+            _exp_ca = {"H": 2.8, "E": -1.5, "C": 0.0}
+            _exp_cb = {"H": -0.5, "E": 1.5, "C": 0.0}
+            _ca_res: list[float] = []
+            _cb_res: list[float] = []
+            for _i, _r in enumerate(result.residues):
+                if _masks_r[_i, 3] > 0:
+                    _ca_res.append(
+                        float(_sec[_i, 3]) - _exp_ca.get(_r.ss, 0.0)
                     )
+                if _masks_r[_i, 4] > 0 and _r.comp_id != "GLY":
+                    _cb_res.append(
+                        float(_sec[_i, 4]) - _exp_cb.get(_r.ss, 0.0)
+                    )
+
+            _flag_parts: list[str] = []
+            for _name, _res in (("CA", _ca_res), ("CB", _cb_res)):
+                if len(_res) < 20:
+                    continue
+                _arr = np.asarray(_res, dtype=np.float64)
+                _m = float(_arr.mean())
+                _s = float(_arr.std(ddof=1))
+                if _s < 1e-3:
+                    continue
+                _z = _m / (_s / float(np.sqrt(len(_arr))))
+                if _m < -0.15 and _z < -2.0:
+                    _flag_parts.append(f"{_name} {_m:+.2f} ppm")
+
+            if _flag_parts:
+                _detail = " and ".join(_flag_parts)
+                status_md += (
+                    f"  ·  **Note:** {_detail} upfield of SS-corrected "
+                    "expected values — this pattern is consistent with "
+                    "deuteration. Try the _Perdeuterated_ preset if applicable."
+                )
         except Exception:
             pass
 

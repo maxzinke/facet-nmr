@@ -414,7 +414,7 @@ def build_shifts_table(shift_list, selected_seq_id):
 # ─────────────────── Predict callback ─────────────────────────
 
 
-def predict_and_format(file_obj, bmrb_id, output_formats):
+def predict_and_format(file_obj, bmrb_id, deuteration, output_formats):
     if not file_obj and not (bmrb_id and bmrb_id.strip()):
         raise gr.Error("Upload a shift list or enter a BMRB entry ID.")
 
@@ -453,7 +453,12 @@ def predict_and_format(file_obj, bmrb_id, output_formats):
         input_label = stem
 
     try:
-        result = predict(predict_input, checkpoint=CHECKPOINT, device="cpu")
+        result = predict(
+            predict_input,
+            checkpoint=CHECKPOINT,
+            device="cpu",
+            deuteration=deuteration,
+        )
     except Exception as e:
         raise gr.Error(f"Prediction failed: {e}")
 
@@ -505,6 +510,8 @@ def predict_and_format(file_obj, bmrb_id, output_formats):
         f"**{n_high}** High  ·  **{n_acc}** Accepted (High+Medium)  ·  "
         f"**{n_flex}** Flexible"
     )
+    if deuteration and deuteration != "protonated":
+        status_md += f"  ·  _¹³C corrected for {deuteration.replace('_', ' ')}_"
 
     return (
         result,
@@ -606,6 +613,17 @@ def build_demo():
                         label="BMRB entry ID",
                         placeholder="e.g. 4493",
                     )
+                    deuteration_input = gr.Radio(
+                        choices=[
+                            ("Protonated (default)", "protonated"),
+                            ("Perdeuterated, amide back-exchanged", "perdeut_exchanged"),
+                            ("Perdeuterated, no back-exchange", "perdeut_unexchanged"),
+                            ("ILV methyl-protonated", "ilv_methyl"),
+                        ],
+                        value="protonated",
+                        label="Sample deuteration",
+                        info="Applies ¹³C isotope shift correction. Use Perdeuterated for TROSY samples.",
+                    )
                     format_choices = gr.CheckboxGroup(
                         choices=FORMAT_CHOICES,
                         value=["XPLOR .tbl", "CYANA .aco", "pred.tab"],
@@ -669,7 +687,7 @@ def build_demo():
 
         predict_btn.click(
             fn=predict_and_format,
-            inputs=[file_input, bmrb_input, format_choices],
+            inputs=[file_input, bmrb_input, deuteration_input, format_choices],
             outputs=[
                 result_state,
                 shift_list_state,
@@ -739,8 +757,8 @@ def build_demo():
         )
 
         gr.Examples(
-            examples=[["examples/ubiquitin.tab", "", ["XPLOR .tbl", "CYANA .aco", "pred.tab"]]],
-            inputs=[file_input, bmrb_input, format_choices],
+            examples=[["examples/ubiquitin.tab", "", "protonated", ["XPLOR .tbl", "CYANA .aco", "pred.tab"]]],
+            inputs=[file_input, bmrb_input, deuteration_input, format_choices],
             label="Example",
         )
 

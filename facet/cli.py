@@ -49,6 +49,14 @@ def main(argv: list[str] | None = None) -> None:
     pred.add_argument("--checkpoint", default=None,
                       help="Path to model checkpoint (.pt)")
     pred.add_argument("--device", default=None, help="cuda / cpu")
+    pred.add_argument(
+        "--deuteration",
+        choices=["protonated", "perdeut-exchanged", "perdeut-unexchanged", "ilv-methyl"],
+        default=None,
+        help="Sample deuteration state for 13C isotope shift correction. "
+             "Default: protonated (no correction). Use perdeut-exchanged for "
+             "a standard perdeuterated sample with amide back-exchange.",
+    )
     pred.add_argument("--include-all", action="store_true",
                       help="Include all residues in restraint files (not just accepted)")
     pred.add_argument("--plot", action="store_true",
@@ -102,6 +110,7 @@ def _cmd_predict(args) -> None:
         predict_input,
         checkpoint=args.checkpoint,
         device=args.device,
+        deuteration=args.deuteration,
     )
 
     n_accepted = len(result.accepted())

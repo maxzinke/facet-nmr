@@ -218,6 +218,7 @@ def predict(
     device: str | None = None,
     half_window: int = 2,
     batch_size: int = 512,
+    deuteration=None,
 ) -> FACETResult:
     """Predict backbone torsion angles from chemical shifts.
 
@@ -228,6 +229,13 @@ def predict(
         device: "cuda", "cpu", or None (auto).
         half_window: Context window (2 = pentapeptide, 3 = heptapeptide).
         batch_size: Inference batch size.
+        deuteration: Optional sample deuteration specifier for 13C isotope
+            shift correction. Accepts ``None`` (protonated, default), a
+            preset name (``"protonated"``, ``"perdeut_exchanged"``,
+            ``"perdeut_unexchanged"``, ``"ilv_methyl"``), a ``DeuterationVector``,
+            or a 3-tuple ``(frac_amide, frac_alpha, frac_sidechain)``. When
+            set, CA/CB/C' shifts are corrected to protonated-equivalent values
+            before inference (FACET is trained on protonated-equivalent data).
 
     Returns:
         FACETResult with per-residue phi, psi, confidence, SS, chi1.
@@ -243,6 +251,31 @@ def predict(
         shift_list = read_auto(input_)
 
     shifts, masks, comp_ids, seq_ids = shift_list.to_arrays()
+
+    # ── Deuterium isotope correction ──
+    # FACET was trained on shifts that are protonated-equivalent (the data
+    # pipeline applies the same correction at build time). Perdeuterated
+    # samples must be corrected here or predictions will be biased by up
+    # to ~0.5 ppm on Cα — enough to swap helix/strand calls near the boundary.
+    if deuteration is not None:
+        from .deuteration import compute_isotope_correction, resolve_deuteration
+        from .io.formats import AA_THREE_TO_ONE
+        dv = resolve_deuteration(deuteration)
+        if dv.frac_amide > 0 or dv.frac_alpha > 0 or dv.frac_sidechain > 0:
+            logger.info(
+                "Applying deuterium isotope correction: "
+                "frac_amide=%.2f, frac_alpha=%.2f, frac_sidechain=%.2f",
+                dv.frac_amide, dv.frac_alpha, dv.frac_sidechain,
+            )
+            _nuc_cols = {"CA": 3, "CB": 4, "C": 5}
+            for i, comp in enumerate(comp_ids):
+                aa1 = AA_THREE_TO_ONE.get(comp)
+                if aa1 is None:
+                    continue
+                corr = compute_isotope_correction(aa1, dv)
+                for nuc, col in _nuc_cols.items():
+                    if masks[i, col] > 0 and abs(corr[nuc]) > 0.001:
+                        shifts[i, col] += corr[nuc]
 
     # ── Minimum size ──
     if len(comp_ids) < _MIN_RESIDUES:

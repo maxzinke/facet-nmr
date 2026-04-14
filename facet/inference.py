@@ -436,4 +436,9 @@ def predict(
             ),
         ))
 
-    return FACETResult(residues=residues, source=shift_list.source)
+    return FACETResult(
+        residues=residues,
+        source=shift_list.source,
+        sequence=shift_list.sequence,
+        seq_id_start=shift_list.seq_id_start,
+    )

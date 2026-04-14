@@ -50,7 +50,10 @@ class ShiftList:
     """
 
     residues: list[Residue]
-    sequence: str = ""  # optional one-letter sequence (for display)
+    sequence: str = ""  # one-letter sequence covering the assigned range plus any
+                        # unassigned flanking/interior residues known to the reader.
+                        # Unknown positions within the range use "X".
+    seq_id_start: int = 1  # seq_id that sequence[0] corresponds to
     source: str = ""  # filename or BMRB ID
 
     @property
@@ -106,6 +109,9 @@ class FACETResult:
 
     residues: list[ResiduePrediction]
     source: str = ""
+    sequence: str = ""  # full one-letter sequence as reported by the reader, or
+                        # empty if the source format doesn't carry it.
+    seq_id_start: int = 1  # seq_id that sequence[0] corresponds to
 
     @property
     def n_residues(self) -> int:

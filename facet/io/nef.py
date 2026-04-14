@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from .formats import BACKBONE_NUCLEI, Residue, ShiftList
+from .formats import AA_THREE_TO_ONE, BACKBONE_NUCLEI, Residue, ShiftList
 
 # Map NEF atom names → FACET canonical nucleus names
 # Per docs/NEF_ATOM_NAMING_CONVENTIONS.md
@@ -56,6 +56,102 @@ def _split_star_row(line: str) -> list[str]:
     return out
 
 
+def _parse_nef_loop(
+    lines: list[str], loop_prefix: str
+) -> list[dict[str, str]]:
+    """Generic minimal reader for a NEF loop matching a given tag prefix.
+
+    Walks the (already stripped) `lines` list, extracts the first loop
+    whose tags start with `loop_prefix` (e.g. ``_nef_chemical_shift.`` or
+    ``_nef_sequence.``), and returns one dict per data row.
+    """
+    tags: list[str] = []
+    in_loop = False
+    in_target_loop = False
+    rows: list[dict[str, str]] = []
+
+    i = 0
+    n = len(lines)
+    while i < n:
+        line = lines[i]
+
+        if line == "loop_":
+            in_loop = True
+            in_target_loop = False
+            tags = []
+            i += 1
+            continue
+
+        if in_loop and line.startswith(loop_prefix):
+            tags.append(line.split(".", 1)[1])
+            in_target_loop = True
+            i += 1
+            continue
+
+        if in_loop and not in_target_loop and line.startswith("_"):
+            in_loop = False
+            tags = []
+            i += 1
+            continue
+
+        if in_loop and in_target_loop:
+            if line == "stop_":
+                # First matching loop is enough
+                return rows
+            if line.startswith("_"):
+                i += 1
+                continue
+            tokens = _split_star_row(line)
+            if len(tokens) == len(tags):
+                rows.append(dict(zip(tags, tokens)))
+            i += 1
+            continue
+
+        i += 1
+
+    return rows
+
+
+def _build_sequence_from_nef_sequence(
+    seq_rows: list[dict[str, str]],
+) -> tuple[str, int]:
+    """Build a dense one-letter sequence from nef_sequence rows.
+
+    Picks the chain with the most residues; unknown positions inside the
+    [min, max] range fill with "X". Returns (sequence, seq_id_start).
+    """
+    if not seq_rows:
+        return ("", 1)
+
+    # Group by chain
+    by_chain: dict[str, dict[int, str]] = {}
+    for row in seq_rows:
+        chain = row.get("chain_code", "A") or "A"
+        seq_code = row.get("sequence_code", "")
+        try:
+            seq_id = int(seq_code)
+        except (ValueError, TypeError):
+            continue
+        residue_name = (row.get("residue_name") or "").upper()
+        if not residue_name:
+            continue
+        by_chain.setdefault(chain, {})[seq_id] = residue_name
+
+    if not by_chain:
+        return ("", 1)
+
+    # Pick the largest chain (matches the reader's shift-loop convention)
+    best_chain = max(by_chain.keys(), key=lambda c: len(by_chain[c]))
+    residues_by_id = by_chain[best_chain]
+
+    min_sid = min(residues_by_id)
+    max_sid = max(residues_by_id)
+    chars = ["X"] * (max_sid - min_sid + 1)
+    for sid, three in residues_by_id.items():
+        chars[sid - min_sid] = AA_THREE_TO_ONE.get(three, "X")
+    return ("".join(chars), min_sid)
+
+
 def read_nef(path: str | Path) -> ShiftList:
     """Read a NEF chemical shift list into a ShiftList.
 
@@ -77,52 +173,18 @@ def read_nef(path: str | Path) -> ShiftList:
             continue
         lines.append(stripped)
 
-    # Find the chemical shift loop
-    tags: list[str] = []
-    in_loop = False
-    in_shift_loop = False
-    rows: list[dict[str, str]] = []
-
-    i = 0
-    while i < len(lines):
-        line = lines[i]
-
-        if line == "loop_":
-            in_loop = True
-            in_shift_loop = False
-            tags = []
-            i += 1
-            continue
-
-        if in_loop and line.startswith("_nef_chemical_shift."):
-            tag = line.split(".", 1)[1]
-            tags.append(tag)
-            in_shift_loop = True
-            i += 1
-            continue
-
-        if in_loop and in_shift_loop:
-            if line == "stop_":
-                in_loop = False
-                in_shift_loop = False
-                tags = []
-                i += 1
-                continue
-            # Skip other _nef tags (non-chemical-shift) inside nested loops
-            if line.startswith("_"):
-                i += 1
-                continue
-            # Data row
-            tokens = _split_star_row(line)
-            if len(tokens) == len(tags):
-                rows.append(dict(zip(tags, tokens)))
-            i += 1
-            continue
-
-        i += 1
+    # Extract chemical shift rows and (if present) the full sequence
+    rows = _parse_nef_loop(lines, "_nef_chemical_shift.")
+    seq_rows = _parse_nef_loop(lines, "_nef_sequence.")
+    sequence, seq_id_start = _build_sequence_from_nef_sequence(seq_rows)
 
     if not rows:
-        return ShiftList(residues=[], source=str(path))
+        return ShiftList(
+            residues=[],
+            sequence=sequence,
+            seq_id_start=seq_id_start,
+            source=str(path),
+        )
 
     # Group by (chain_code, sequence_code)
     by_residue: dict[tuple[str, int], Residue] = {}
@@ -155,4 +217,9 @@ def read_nef(path: str | Path) -> ShiftList:
 
     # Sort by chain then seq_id
     residues = [by_residue[k] for k in sorted(by_residue)]
-    return ShiftList(residues=residues, source=str(path))
+    return ShiftList(
+        residues=residues,
+        sequence=sequence,
+        seq_id_start=seq_id_start,
+        source=str(path),
+    )

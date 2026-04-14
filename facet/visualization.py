@@ -177,13 +177,15 @@ def plot_sequence_ss(
     path: str | Path | None = None,
     residues_per_row: int = 60,
     title: str | None = None,
+    sequence: str | None = None,
+    seq_id_start: int | None = None,
 ):
     """Publication-grade sequence + secondary structure figure.
 
     Layers (top to bottom):
       1. Confidence bars (continuous height, single color, + threshold line)
       2. Residue numbering (every 10, small gray)
-      3. One-letter sequence (bold monospace)
+      3. One-letter sequence (bold monospace; dim for unassigned residues)
       4. SS cartoon (helix cylinders, strand arrows)
       5. SS element labels (β1, α1, ...)
 
@@ -192,6 +194,13 @@ def plot_sequence_ss(
         path: Output path (.png/.pdf/.svg). None → return fig without saving.
         residues_per_row: Residues per row (default 60)
         title: Figure title (default: derived from result.source)
+        sequence: Optional one-letter sequence override. If provided, takes
+            precedence over ``result.sequence``. Used to render real amino-acid
+            letters in unassigned slots and to extend the plot range across
+            unassigned N/C termini.
+        seq_id_start: Optional seq_id corresponding to ``sequence[0]``. Only
+            meaningful when ``sequence`` is given; defaults to
+            ``result.seq_id_start`` and falls back to 1.
 
     Returns:
         matplotlib Figure
@@ -206,14 +215,53 @@ def plot_sequence_ss(
     # the order the predictor emitted.
     residues = sorted(result.residues, key=lambda r: r.seq_id)
 
-    # Position space: position = seq_id - seq_id_base. Internal gaps between
-    # the first and last assigned residue are preserved as empty slots. N/C
-    # termini outside that range are not drawn (FACETResult doesn't know how
-    # long the protein is beyond its assignments).
-    seq_id_base = residues[0].seq_id
-    total_positions = residues[-1].seq_id - seq_id_base + 1
+    # Resolve the display sequence. Priority: explicit param → result field →
+    # none (fall back to placeholder dots for unassigned slots).
+    display_sequence = sequence if sequence is not None else (result.sequence or "")
+    display_seq_id_start = (
+        seq_id_start
+        if seq_id_start is not None
+        else (result.seq_id_start if display_sequence else 1)
+    )
+
+    # Sanity-check the sequence against the assigned residues. If > 20% of
+    # assigned positions disagree with the sequence letter, drop the sequence
+    # and fall back to placeholder rendering — most likely the reader picked
+    # the wrong entity or the seq_id_start is wrong.
+    if display_sequence:
+        seq_end = display_seq_id_start + len(display_sequence) - 1
+        n_check = 0
+        n_mismatch = 0
+        for r in residues:
+            idx = r.seq_id - display_seq_id_start
+            if 0 <= idx < len(display_sequence):
+                n_check += 1
+                expected = AA_THREE_TO_ONE.get(r.comp_id, "X")
+                if display_sequence[idx] != expected and display_sequence[idx] != "X":
+                    n_mismatch += 1
+        if n_check > 0 and n_mismatch / n_check > 0.2:
+            import logging
+            logging.getLogger("facet").warning(
+                "Sequence/assignment mismatch (%d/%d positions disagree) — "
+                "falling back to placeholder rendering",
+                n_mismatch, n_check,
+            )
+            display_sequence = ""
+
+    # Position space: position = seq_id - seq_id_base.
+    if display_sequence:
+        # Sequence-driven: span the full known polymer, not just the assigned range.
+        seq_id_base = display_seq_id_start
+        total_positions = len(display_sequence)
+    else:
+        # Assignment-driven: start at first assigned, end at last. Unassigned
+        # internal gaps still render as empty slots (via the position map).
+        seq_id_base = residues[0].seq_id
+        total_positions = residues[-1].seq_id - seq_id_base + 1
+
     position_to_residue: dict[int, ResiduePrediction] = {
         r.seq_id - seq_id_base: r for r in residues
+        if 0 <= r.seq_id - seq_id_base < total_positions
     }
 
     n_rows = math.ceil(total_positions / residues_per_row)
@@ -323,10 +371,17 @@ def plot_sequence_ss(
         for i, pos in enumerate(range(p0, p1)):
             r = position_to_residue.get(pos)
             if r is None:
-                # Unassigned slot: faint dot placeholder. Keeps sequence
-                # rhythm visible without faking a letter we don't have.
+                # Unassigned slot. If a reader-supplied sequence is available
+                # we render the real AA letter in dim gray; otherwise fall
+                # back to a neutral dot placeholder.
+                if display_sequence and 0 <= pos < len(display_sequence):
+                    letter = display_sequence[pos]
+                    if letter == "X":
+                        letter = "·"
+                else:
+                    letter = "·"
                 ax.text(
-                    i, Y_SEQ, "·",
+                    i, Y_SEQ, letter,
                     ha="center", va="center",
                     fontsize=10,
                     fontfamily="monospace",

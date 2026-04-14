@@ -73,6 +73,40 @@ def _parse_semicolon_block(lines: list[str], start: int) -> tuple[str, int]:
     return ("\n".join(content_lines).strip(), i)
 
 
+def _parse_entity_sequence(lines: list[str]) -> str:
+    """Find ``_Entity.Polymer_seq_one_letter_code`` and return its value.
+
+    The value can be on the same line or in a ``;`` multi-line block.
+    Returns "" if not found. All whitespace is stripped.
+    """
+    n = len(lines)
+    i = 0
+    while i < n:
+        stripped = lines[i].strip()
+        if stripped.startswith("_Entity.Polymer_seq_one_letter_code"):
+            parts = stripped.split(None, 1)
+            if len(parts) == 2 and parts[1] and not parts[1].startswith(";"):
+                return "".join(parts[1].strip("'\"").split())
+            # Search forward for a ';' multi-line block or inline value
+            j = i + 1
+            while j < n:
+                next_stripped = lines[j].strip()
+                if not next_stripped:
+                    j += 1
+                    continue
+                if next_stripped.startswith(";"):
+                    block, _ = _parse_semicolon_block(lines, j)
+                    return "".join(block.split())
+                if next_stripped.startswith("_") or next_stripped in (
+                    "loop_", "stop_", "save_",
+                ):
+                    return ""
+                return "".join(next_stripped.strip("'\"").split())
+            return ""
+        i += 1
+    return ""
+
+
 def read_nmrstar(path: str | Path) -> ShiftList:
     """Read an NMR-STAR v3 chemical shift list.
 
@@ -161,8 +195,11 @@ def read_nmrstar(path: str | Path) -> ShiftList:
 
         i += 1
 
+    # Extract entity sequence (best-effort — returns "" if not found)
+    sequence = _parse_entity_sequence(lines)
+
     if not rows:
-        return ShiftList(residues=[], source=str(path))
+        return ShiftList(residues=[], sequence=sequence, source=str(path))
 
     # Group by entity first (multi-chain depositions are common for complexes).
     # Each entity gets its own dict of residues; we pick the largest afterward.
@@ -219,4 +256,4 @@ def read_nmrstar(path: str | Path) -> ShiftList:
         )
 
     residues = [by_key[k] for k in sorted(by_key)]
-    return ShiftList(residues=residues, source=str(path))
+    return ShiftList(residues=residues, sequence=sequence, source=str(path))

@@ -128,4 +128,43 @@ def fetch_bmrb(
         )
 
     residues = [by_key[k] for k in sorted(by_key)]
-    return ShiftList(residues=residues, source=f"BMRB:{entry_id}")
+    sequence, seq_id_start = _fetch_entity_sequence(entry_id, timeout)
+    return ShiftList(
+        residues=residues,
+        sequence=sequence,
+        seq_id_start=seq_id_start,
+        source=f"BMRB:{entry_id}",
+    )
+
+
+def _fetch_entity_sequence(entry_id: str, timeout: float) -> tuple[str, int]:
+    """Fetch the polymer sequence from the entity saveframe.
+
+    Best-effort: returns ("", 1) on any failure. The main shift fetch
+    should succeed even if the sequence call fails (offline, 404,
+    schema drift, non-polymer entries, etc.).
+    """
+    url = f"{BMRB_API}/{entry_id}?saveframe_category=entity"
+    try:
+        with urlopen(url, timeout=timeout) as resp:
+            data = json.load(resp)
+    except (URLError, TimeoutError, json.JSONDecodeError, OSError):
+        return ("", 1)
+
+    entry = data.get(entry_id, {})
+    entities = entry.get("entity", []) or entry.get("saveframes", [])
+    if not entities:
+        return ("", 1)
+
+    best_seq = ""
+    for sf in entities:
+        tags = sf.get("tags", [])
+        tag_dict = dict(tags) if isinstance(tags, list) else tags
+        seq = tag_dict.get("Polymer_seq_one_letter_code") or ""
+        if not isinstance(seq, str):
+            continue
+        seq = "".join(seq.split())
+        if len(seq) > len(best_seq):
+            best_seq = seq
+
+    return (best_seq, 1)

@@ -42,6 +42,7 @@ COLOR_STRAND = "#1F3A5F"        # navy — beta strand (convention)
 COLOR_BASELINE = "#95A5A6"      # light gray — coil baseline line
 COLOR_SEQ = "#1C2833"           # near-black — sequence letters
 COLOR_NUM = "#7F8C8D"           # mid-gray — residue numbers
+COLOR_UNASSIGNED = "#C8CDD0"    # very light gray — unassigned residue placeholder
 
 # DSSP-like minimum lengths for SS elements
 MIN_HELIX_LEN = 4   # α-helix = one full turn (≥4 residues)
@@ -70,13 +71,19 @@ SS_ELEMENT_HEIGHT = 0.55
 
 # ───────────────── SS element identification ─────────────────
 
-def _ss_elements(residues: list[ResiduePrediction]) -> list[tuple[str, int, int, str]]:
+def _ss_elements(
+    residues: list[ResiduePrediction],
+    seq_id_base: int,
+) -> list[tuple[str, int, int, str]]:
     """Identify SS elements with DSSP-like minimum-length smoothing.
 
-    Returns list of (ss_type, start_idx, end_idx_inclusive, label) where
-    ss_type ∈ {"H", "E"} and label is "α1", "β1", etc.
+    Returns list of (ss_type, start_pos, end_pos_inclusive, label) where
+    ss_type ∈ {"H", "E"}, positions are sequence-space (seq_id - seq_id_base),
+    and label is "α1", "β1", etc.
 
-    Runs shorter than the minimum length are demoted to coil (not emitted).
+    Runs are broken at non-consecutive seq_ids so an element cannot span an
+    unassigned gap. Runs shorter than the minimum length are demoted to coil
+    (not emitted).
     """
     elements: list[tuple[str, int, int, str]] = []
     n_h = 0
@@ -89,17 +96,21 @@ def _ss_elements(residues: list[ResiduePrediction]) -> list[tuple[str, int, int,
         if ss in ("H", "E"):
             j = i
             while j < n and residues[j].ss == ss:
+                if j > i and residues[j].seq_id != residues[j - 1].seq_id + 1:
+                    break
                 j += 1
             run_len = j - i
             min_len = MIN_HELIX_LEN if ss == "H" else MIN_STRAND_LEN
             if run_len >= min_len:
+                start_pos = residues[i].seq_id - seq_id_base
+                end_pos = residues[j - 1].seq_id - seq_id_base
                 if ss == "H":
                     n_h += 1
                     label = f"α{n_h}"
                 else:
                     n_e += 1
                     label = f"β{n_e}"
-                elements.append((ss, i, j - 1, label))
+                elements.append((ss, start_pos, end_pos, label))
             i = j
         else:
             i += 1
@@ -188,12 +199,24 @@ def plot_sequence_ss(
     import matplotlib.pyplot as plt
     import numpy as np
 
-    residues = result.residues
-    n = len(residues)
-    if n == 0:
+    if len(result.residues) == 0:
         raise ValueError("No residues to plot")
 
-    n_rows = math.ceil(n / residues_per_row)
+    # Sort by seq_id so gap detection and position math work regardless of
+    # the order the predictor emitted.
+    residues = sorted(result.residues, key=lambda r: r.seq_id)
+
+    # Position space: position = seq_id - seq_id_base. Internal gaps between
+    # the first and last assigned residue are preserved as empty slots. N/C
+    # termini outside that range are not drawn (FACETResult doesn't know how
+    # long the protein is beyond its assignments).
+    seq_id_base = residues[0].seq_id
+    total_positions = residues[-1].seq_id - seq_id_base + 1
+    position_to_residue: dict[int, ResiduePrediction] = {
+        r.seq_id - seq_id_base: r for r in residues
+    }
+
+    n_rows = math.ceil(total_positions / residues_per_row)
     row_height_in = 1.6  # inches per row
 
     fig, axes = plt.subplots(
@@ -203,29 +226,36 @@ def plot_sequence_ss(
     )
     axes = axes.flatten()
 
-    elements = _ss_elements(residues)
+    elements = _ss_elements(residues, seq_id_base)
 
     for row_idx in range(n_rows):
         ax = axes[row_idx]
-        r0 = row_idx * residues_per_row
-        r1 = min(r0 + residues_per_row, n)
-        row_residues = residues[r0:r1]
-        row_len = len(row_residues)
+        p0 = row_idx * residues_per_row
+        p1 = min(p0 + residues_per_row, total_positions)
+        row_len = p1 - p0
 
         x = np.arange(row_len)
 
         # ── Layer 1: confidence bars ──
         bar_range = Y_BAR_TOP - Y_BAR_BASE
-        bar_heights = []
-        is_flexible = []
-        for r in row_residues:
-            if r.confidence_class == "Flexible":
+        bar_heights: list[float] = []
+        is_flexible: list[bool] = []
+        is_unassigned: list[bool] = []
+        for pos in range(p0, p1):
+            r = position_to_residue.get(pos)
+            if r is None:
+                bar_heights.append(0.0)
+                is_flexible.append(False)
+                is_unassigned.append(True)
+            elif r.confidence_class == "Flexible":
                 bar_heights.append(0.0)
                 is_flexible.append(True)
+                is_unassigned.append(False)
             else:
                 h = _normalize_confidence(r.confidence) * bar_range
                 bar_heights.append(h)
                 is_flexible.append(False)
+                is_unassigned.append(False)
 
         # Main bars (uniform charcoal color)
         ax.bar(
@@ -252,6 +282,20 @@ def plot_sequence_ss(
                 zorder=2,
             )
 
+        # Unassigned residues: small light-gray dash at bar base to mark
+        # the missing slot without filling it.
+        unassigned_x = [i for i, u in enumerate(is_unassigned) if u]
+        if unassigned_x:
+            ax.scatter(
+                unassigned_x,
+                [Y_BAR_BASE] * len(unassigned_x),
+                s=12,
+                color=COLOR_UNASSIGNED,
+                marker="_",
+                linewidths=1.0,
+                zorder=2,
+            )
+
         # High-tier threshold dashed reference line
         high_norm = _normalize_confidence(CONF_HIGH_THRESHOLD) * bar_range
         ax.axhline(
@@ -265,30 +309,39 @@ def plot_sequence_ss(
         )
 
         # ── Layer 2: residue numbers (every 10 + row termini) ──
-        shown_nums = set()
-        for i, r in enumerate(row_residues):
-            if r.seq_id % 10 == 0 or i == 0 or i == row_len - 1:
-                if r.seq_id in shown_nums:
-                    continue
-                shown_nums.add(r.seq_id)
+        for i, pos in enumerate(range(p0, p1)):
+            seq_id = pos + seq_id_base
+            if seq_id % 10 == 0 or i == 0 or i == row_len - 1:
                 ax.text(
-                    i, Y_NUM, str(r.seq_id),
+                    i, Y_NUM, str(seq_id),
                     ha="center", va="center",
                     fontsize=7,
                     color=COLOR_NUM,
                 )
 
         # ── Layer 3: sequence letters ──
-        for i, r in enumerate(row_residues):
-            aa1 = AA_THREE_TO_ONE.get(r.comp_id, "X")
-            ax.text(
-                i, Y_SEQ, aa1,
-                ha="center", va="center",
-                fontsize=10,
-                fontfamily="monospace",
-                fontweight="bold",
-                color=COLOR_SEQ,
-            )
+        for i, pos in enumerate(range(p0, p1)):
+            r = position_to_residue.get(pos)
+            if r is None:
+                # Unassigned slot: faint dot placeholder. Keeps sequence
+                # rhythm visible without faking a letter we don't have.
+                ax.text(
+                    i, Y_SEQ, "·",
+                    ha="center", va="center",
+                    fontsize=10,
+                    fontfamily="monospace",
+                    color=COLOR_UNASSIGNED,
+                )
+            else:
+                aa1 = AA_THREE_TO_ONE.get(r.comp_id, "X")
+                ax.text(
+                    i, Y_SEQ, aa1,
+                    ha="center", va="center",
+                    fontsize=10,
+                    fontfamily="monospace",
+                    fontweight="bold",
+                    color=COLOR_SEQ,
+                )
 
         # ── Layer 4: SS cartoon ──
         # Coil baseline (thin horizontal line)
@@ -302,10 +355,10 @@ def plot_sequence_ss(
 
         # Draw elements that overlap this row
         for ss_type, start, end, label in elements:
-            if end < r0 or start >= r1:
+            if end < p0 or start >= p1:
                 continue
-            row_start = max(start, r0) - r0
-            row_end = min(end, r1 - 1) - r0
+            row_start = max(start, p0) - p0
+            row_end = min(end, p1 - 1) - p0
 
             if ss_type == "H":
                 _draw_helix(ax, row_start, row_end, Y_SS_CENTER)
@@ -347,6 +400,9 @@ def plot_sequence_ss(
         Line2D([0], [0], marker="x", color=COLOR_FLEXIBLE,
                markersize=7, linewidth=0, markeredgewidth=1.8,
                label="Flexible"),
+        Line2D([0], [0], marker="_", color=COLOR_UNASSIGNED,
+               markersize=9, linewidth=0, markeredgewidth=1.4,
+               label="Unassigned"),
         Patch(facecolor=COLOR_HELIX, label="α helix"),
         Patch(facecolor=COLOR_STRAND, label="β strand"),
     ]
@@ -354,7 +410,7 @@ def plot_sequence_ss(
         handles=handles,
         loc="lower center",
         bbox_to_anchor=(0.5, -0.01),
-        ncol=5,
+        ncol=6,
         frameon=False,
         fontsize=9,
     )

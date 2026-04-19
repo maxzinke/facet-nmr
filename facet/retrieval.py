@@ -248,7 +248,13 @@ class FACETRetrieval:
             # Reject these spread clusters up front: the member labels get
             # flipped to -1 (noise) so basin-populations still see them, but
             # the cluster itself is dropped before tier assignment.
-            SPREAD_STD_DEG = 50.0
+            #
+            # Threshold choice: legitimate Ramachandran basins have per-angle
+            # std <= 25 deg (alpha ~5 deg, beta-strand ~20 deg, PPII ~15 deg).
+            # 30 deg is well above any genuine basin but still catches chains
+            # that span ~100 deg (R=0.86) where the circular mean becomes
+            # physically meaningless.
+            SPREAD_STD_DEG = 30.0
 
             clusters: list[RetrievalCluster] = []
             max_label = int(labels.max()) if labels.size and labels.max() >= 0 else -1

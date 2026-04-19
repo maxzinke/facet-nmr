@@ -57,8 +57,14 @@ def main(argv: list[str] | None = None) -> None:
              "Default: protonated (no correction). Use perdeut-exchanged for "
              "a standard perdeuterated sample with amide back-exchange.",
     )
+    pred.add_argument("--include-medium", action="store_true",
+                      help="Include Medium-tier residues in restraint files "
+                           "(adds ~47%% of residues at 16.5 deg median, 38%% "
+                           "fail25 — bringing coverage to ~98%%). Use cautiously.")
     pred.add_argument("--include-all", action="store_true",
-                      help="Include all residues in restraint files (not just accepted)")
+                      help="Include all residues in restraint files "
+                           "regardless of tier (Low + Flexible included — "
+                           "for exploratory use only).")
     pred.add_argument("--plot", action="store_true",
                       help="Also write a publication-grade sequence + SS figure (.png)")
     pred.add_argument("-v", "--verbose", action="store_true")
@@ -113,12 +119,13 @@ def _cmd_predict(args) -> None:
         deuteration=args.deuteration,
     )
 
-    n_accepted = len(result.accepted())
+    n_accepted = len(result.accepted(include_medium=args.include_medium))
     n_high = len(result.high())
     n_flexible = len(result.flexible())
     logger.info("Predicted %d residues: %d High, %d Accepted, %d Flexible",
                 result.n_residues, n_high, n_accepted, n_flexible)
 
+    include_medium = args.include_medium or args.include_all
     accepted_only = not args.include_all
 
     if args.format:
@@ -130,7 +137,8 @@ def _cmd_predict(args) -> None:
         }
         writer = writers[args.format]
         if args.format in ("tbl", "aco", "nef"):
-            writer(result, out, accepted_only=accepted_only)
+            writer(result, out, accepted_only=accepted_only,
+                   include_medium=include_medium)
         else:
             writer(result, out)
         logger.info("Wrote %s", out)
@@ -143,11 +151,14 @@ def _cmd_predict(args) -> None:
         for fmt in formats:
             out = out_dir / f"{stem}_facet.{fmt}"
             if fmt == "tbl":
-                write_tbl(result, out, accepted_only=accepted_only)
+                write_tbl(result, out, accepted_only=accepted_only,
+                          include_medium=include_medium)
             elif fmt == "aco":
-                write_aco(result, out, accepted_only=accepted_only)
+                write_aco(result, out, accepted_only=accepted_only,
+                          include_medium=include_medium)
             elif fmt == "nef":
-                write_nef(result, out, accepted_only=accepted_only)
+                write_nef(result, out, accepted_only=accepted_only,
+                          include_medium=include_medium)
             elif fmt == "predtab":
                 write_predtab(result, out)
             elif fmt == "csv":

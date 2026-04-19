@@ -259,15 +259,17 @@ def predict(
             shift correction.
         use_retrieval: If True, use retrieval-augmented inference (kNN + DBSCAN
             over a bundled 253K-residue reference index). Produces multi-modal
-            predictions with TALOS-N-style Strong/Generous/Ambiguous/None tiers
-            and per-residue basin populations (alpha/beta/PPII/other). Requires
-            the bundled retrieval index file. If None (default), auto-selects
-            retrieval when the index is available, parametric otherwise.
+            predictions with FACET confidence tiers (High / Medium / Low /
+            Flexible) calibrated from cluster agreement, and per-residue
+            basin populations (alpha/beta/PPII/other). Requires the bundled
+            retrieval index file. If None (default), auto-selects retrieval
+            when the index is available, parametric otherwise.
         retrieval_k: Number of nearest neighbors to retrieve (default 25).
 
     Returns:
-        FACETResult with per-residue phi, psi, confidence, SS, chi1 (and
-        retrieval_tier + basin_populations when retrieval is used).
+        FACETResult with per-residue phi, psi, confidence, confidence_class
+        (tier), SS, chi1. When retrieval is used, each prediction also
+        carries basin_populations and alt_clusters.
     """
     import logging
     logger = logging.getLogger("facet")
@@ -434,10 +436,19 @@ def predict(
     all_chi1 = np.zeros(n, dtype=np.int64)
     all_chi1_probs = np.zeros((n, 3), dtype=np.float32)
     has_chi1_probs = False
-    # Retrieval-only outputs (None when use_retrieval=False)
+    # Retrieval-only outputs (stays None for all residues when use_retrieval=False;
+    # in retrieval mode the DBSCAN tier is folded into confidence_class below).
     all_tier: list[str | None] = [None] * n
     all_basin_pops: list[tuple[float, float, float, float] | None] = [None] * n
     all_alt_clusters: list[list[tuple[float, float, float]] | None] = [None] * n
+
+    # DBSCAN cluster-quality labels map onto FACET's native tier vocabulary.
+    _RETRIEVAL_TIER_TO_CONF = {
+        "Strong":    "High",      # tight single cluster, restraint-quality
+        "Generous":  "Medium",    # wider cluster, cautious use
+        "Ambiguous": "Low",       # multi-modal — omit from restraints
+        "None":      "Flexible",  # no confident cluster — disordered / flexible
+    }
 
     for start in range(0, n, batch_size):
         end = min(start + batch_size, n)
@@ -496,18 +507,23 @@ def predict(
         conf = float(all_conf[i])
         err_bound = _estimate_error_bound(conf)
         has_chi1 = comp_ids[i] not in ("GLY", "ALA")
+        # In retrieval mode, DBSCAN cluster quality drives the tier; the
+        # entropy-based class is used only when retrieval is disabled.
+        if all_tier[i] is not None:
+            tier = _RETRIEVAL_TIER_TO_CONF.get(all_tier[i], "Flexible")
+        else:
+            tier = _classify_confidence(conf)
         residues.append(ResiduePrediction(
             seq_id=seq_ids[i],
             comp_id=comp_ids[i],
             phi=float(all_phi[i]),
             psi=float(all_psi[i]),
             confidence=conf,
-            confidence_class=_classify_confidence(conf),
+            confidence_class=tier,
             ss=SS_LABELS.get(int(all_ss[i]), "C"),
             chi1=int(all_chi1[i]) if has_chi1 else None,
             phi_err=err_bound,
             psi_err=err_bound,
-            retrieval_tier=all_tier[i],
             basin_populations=all_basin_pops[i],
             alt_clusters=all_alt_clusters[i],
             chi1_probs=(

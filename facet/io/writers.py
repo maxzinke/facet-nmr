@@ -9,9 +9,9 @@ Supported formats:
   - JSON              (machine-readable)
 
 All writers take a FACETResult and an output path. Only residues with
-Strong or Good confidence are included in restraint files (.tbl, .aco,
-.nef) by default. Summary formats (pred.tab, CSV, JSON) include all
-residues.
+High confidence are included in restraint files (.tbl, .aco, .nef) by
+default; pass ``include_medium=True`` to also include Medium-tier
+residues. Summary formats (pred.tab, CSV, JSON) include all residues.
 """
 from __future__ import annotations
 
@@ -32,6 +32,7 @@ def write_tbl(
     path: str | Path,
     *,
     accepted_only: bool = True,
+    include_medium: bool = False,
     chain: str = "A",
 ) -> Path:
     """Write XPLOR/CNS dihedral restraint file.
@@ -52,7 +53,7 @@ def write_tbl(
     out = Path(path).resolve()
     out.parent.mkdir(parents=True, exist_ok=True)
 
-    residues = result.accepted() if accepted_only else result.residues
+    residues = result.accepted(include_medium=include_medium) if accepted_only else result.residues
     present_sids = {r.seq_id for r in result.residues}
 
     lines = [f"! FACET dihedral restraints — {len(residues)} residues\n"]
@@ -99,6 +100,7 @@ def write_aco(
     path: str | Path,
     *,
     accepted_only: bool = True,
+    include_medium: bool = False,
 ) -> Path:
     """Write CYANA angle constraint file.
 
@@ -111,7 +113,7 @@ def write_aco(
     out = Path(path).resolve()
     out.parent.mkdir(parents=True, exist_ok=True)
 
-    residues = result.accepted() if accepted_only else result.residues
+    residues = result.accepted(include_medium=include_medium) if accepted_only else result.residues
 
     lines = ["# FACET torsion angle restraints"]
     lines.append(f"# {len(residues)} residues")
@@ -136,8 +138,9 @@ def write_nef(
     path: str | Path,
     *,
     accepted_only: bool = True,
+    include_medium: bool = False,
     chain_code: str = "A",
-    program_version: str = "0.1.0",
+    program_version: str = "0.2.0",
 ) -> Path:
     """Write NEF dihedral restraint file.
 
@@ -151,7 +154,7 @@ def write_nef(
     out = Path(path).resolve()
     out.parent.mkdir(parents=True, exist_ok=True)
 
-    residues = result.accepted() if accepted_only else result.residues
+    residues = result.accepted(include_medium=include_medium) if accepted_only else result.residues
     present_sids = {r.seq_id for r in result.residues}
 
     lines: list[str] = []

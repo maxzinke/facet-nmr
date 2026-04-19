@@ -2,9 +2,10 @@
 
 Replaces parametric argmax decoding with a kNN search over ~253K BMRB
 training-residue embeddings + DBSCAN clustering of retrieved neighbors'
-(phi, psi). Emits multi-modal predictions with TALOS-N-style confidence
-tiers (Strong / Generous / Ambiguous / None) when the retrieved cluster
-agreement warrants abstention.
+(phi, psi). Emits multi-modal predictions with cluster-agreement
+tier labels (Strong / Generous / Ambiguous / None); the inference layer
+maps these onto FACET's public tier vocabulary (High / Medium / Low /
+Flexible).
 
 **Why this helps**: chemical shifts are time-averaged observables, so
 for flexible residues no single (phi, psi) fully explains them. Retrieval
@@ -22,7 +23,8 @@ point prediction, especially on coil.
     )
     results = retr.predict(shifts, masks, aa_idx, flags, k=25)
     # results[i]: RetrievalResult with .clusters (list of RetrievalCluster)
-    # and .tier ∈ {"Strong", "Generous", "Ambiguous", "None"}.
+    # and .tier = cluster-agreement label (internal; mapped to High/
+    # Medium/Low/Flexible before the user sees it).
 """
 
 from __future__ import annotations
@@ -212,7 +214,10 @@ class FACETRetrieval:
             prediction. Each cluster carries per-basin classification.
           - ``basin_populations``: [alpha_R, beta, PPII, other] fractions
             summing to 1 (over clustered neighbors only).
-          - ``tier``: TALOS-N-style ``Strong``/``Generous``/``Ambiguous``/``None``.
+          - ``tier``: internal cluster-agreement label
+            (``Strong``/``Generous``/``Ambiguous``/``None``). The inference
+            layer translates this into FACET's public High/Medium/Low/
+            Flexible vocabulary before it reaches the user.
         """
         h = self._encode(
             shifts.to(self.device), masks.to(self.device),

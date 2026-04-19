@@ -21,11 +21,21 @@ AA_ONE_TO_THREE = {
 }
 AA_THREE_TO_ONE = {v: k for k, v in AA_ONE_TO_THREE.items()}
 
-# Confidence classes — independently calibrated from the v3 risk-coverage curve.
-#   High:     confident rigid geometry — use for restraints
-#   Medium:   moderate confidence — use cautiously
-#   Low:      uncertain — interpret with care
-#   Flexible: biologically flexible / disordered region (NOT a failure)
+# FACET confidence tiers — single unified vocabulary across the model.
+# Calibration source differs by mode:
+#   * Retrieval on (default): derived from DBSCAN cluster agreement among
+#     the top-k retrieved neighbors.
+#   * Retrieval off: derived from the entropy of the coarse Ramachandran head.
+#
+# Calibrated numbers on the 745-protein clean benchmark (retrieval mode):
+#   High     — 50.5% of residues, 9.6 deg median, 14.5% fail25  (restraint-quality)
+#   Medium   — 47.5% of residues, 16.5 deg median, 38.2% fail25 (cautious use)
+#   Low      —  1.7% of residues, 73.8 deg median, 76.5% fail25 (multi-modal)
+#   Flexible —  0.3% of residues                                (disordered / no cluster)
+#
+# Flexible is not a failure state — it flags residues where neighbor shifts
+# disagree, i.e. the chemical shifts are consistent with conformational
+# averaging rather than rigid geometry.
 CONF_HIGH = "High"
 CONF_MEDIUM = "Medium"
 CONF_LOW = "Low"
@@ -105,10 +115,6 @@ class ResiduePrediction:
     # ── Retrieval-augmented output (v0.2+) ──
     # Only populated when predict(..., use_retrieval=True). Absent fields
     # default to None so existing downstream consumers keep working.
-    retrieval_tier: str | None = None
-    # "Strong" / "Generous" / "Ambiguous" / "None" — analogous to TALOS-N's
-    # Strong/Generous tiers but derived from DBSCAN cluster agreement among
-    # the top-k retrieved neighbors.
     basin_populations: tuple[float, float, float, float] | None = None
     # [alpha_R, beta, PPII, other] fractions summing to 1. For flex residues
     # spectroscopists get a proper distribution, not a single-point fiction.
@@ -133,17 +139,35 @@ class FACETResult:
         return len(self.residues)
 
     def high(self) -> list[ResiduePrediction]:
-        """Residues with High confidence (narrowest restraints, safest use)."""
+        """Residues in the High tier — restraint-quality.
+
+        In retrieval mode: 9.6 deg median / 14.5% fail25 / ~50% of residues.
+        """
         return [r for r in self.residues if r.confidence_class == CONF_HIGH]
 
-    def accepted(self) -> list[ResiduePrediction]:
-        """Residues with High or Medium confidence (use for restraints)."""
-        return [r for r in self.residues
-                if r.confidence_class in (CONF_HIGH, CONF_MEDIUM)]
+    def accepted(self, include_medium: bool = False) -> list[ResiduePrediction]:
+        """Residues to include in restraint files.
+
+        Default: High tier only (9.6 deg / 14.5% fail25). This is the
+        restraint-quality set — directly usable for XPLOR / CYANA / HADDOCK.
+
+        ``include_medium=True`` adds the Medium tier (16.5 deg / 38% fail25),
+        bringing coverage to ~98% of residues. Use with caution — Medium-tier
+        residues fail more often and widen the restraint bounds.
+        """
+        keep = {CONF_HIGH}
+        if include_medium:
+            keep.add(CONF_MEDIUM)
+        return [r for r in self.residues if r.confidence_class in keep]
 
     def flexible(self) -> list[ResiduePrediction]:
-        """Residues flagged as flexible / disordered."""
-        return [r for r in self.residues if r.confidence_class == CONF_FLEXIBLE]
+        """Residues flagged as flexible / disordered (Low + Flexible tiers).
+
+        These should be excluded from structure-calculation restraints, but
+        the flexible label is itself a biologically meaningful signal.
+        """
+        return [r for r in self.residues
+                if r.confidence_class in (CONF_LOW, CONF_FLEXIBLE)]
 
     def to_tbl(self, path: str, **kw) -> None:
         """Write XPLOR/CNS .tbl restraints."""
@@ -181,21 +205,22 @@ class FACETResult:
         lines = [
             f"FACET prediction: {self.n_residues} residues from {self.source}",
             "",
-            f"  {'ResID':>5s} {'AA':>4s} {'PHI':>8s} {'PSI':>8s} {'dPHI':>6s} {'dPSI':>6s} {'SS':>3s} {'CHI1':>5s} {'Class':>8s}",
+            f"  {'ResID':>5s} {'AA':>4s} {'PHI':>8s} {'PSI':>8s} {'dPHI':>6s} {'dPSI':>6s} {'SS':>3s} {'CHI1':>5s} {'Tier':>9s}",
         ]
         for r in self.residues:
             chi1_str = CHI1_NAMES.get(r.chi1, ".") if r.chi1 is not None else "."
             lines.append(
                 f"  {r.seq_id:5d} {r.comp_id:>4s} {r.phi:8.1f} {r.psi:8.1f} "
-                f"{r.phi_err:6.1f} {r.psi_err:6.1f} {r.ss:>3s} {chi1_str:>5s} {r.confidence_class:>8s}"
+                f"{r.phi_err:6.1f} {r.psi_err:6.1f} {r.ss:>3s} {chi1_str:>5s} {r.confidence_class:>9s}"
             )
-        n_high = len(self.high())
-        n_accepted = len(self.accepted())
-        n_flexible = len(self.flexible())
+        n = max(self.n_residues, 1)
+        from collections import Counter
+        counts = Counter(r.confidence_class for r in self.residues)
         lines.append("")
         lines.append(
-            f"  High: {n_high} ({100*n_high/max(self.n_residues,1):.0f}%)  "
-            f"Accepted: {n_accepted} ({100*n_accepted/max(self.n_residues,1):.0f}%)  "
-            f"Flexible: {n_flexible} ({100*n_flexible/max(self.n_residues,1):.0f}%)"
+            f"  High: {counts.get(CONF_HIGH,0)} ({100*counts.get(CONF_HIGH,0)/n:.0f}%)  "
+            f"Medium: {counts.get(CONF_MEDIUM,0)} ({100*counts.get(CONF_MEDIUM,0)/n:.0f}%)  "
+            f"Low: {counts.get(CONF_LOW,0)} ({100*counts.get(CONF_LOW,0)/n:.0f}%)  "
+            f"Flexible: {counts.get(CONF_FLEXIBLE,0)} ({100*counts.get(CONF_FLEXIBLE,0)/n:.0f}%)"
         )
         return "\n".join(lines)

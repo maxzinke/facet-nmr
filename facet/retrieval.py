@@ -239,6 +239,17 @@ class FACETRetrieval:
             pts = np.stack([phi_nb, psi_nb], axis=1)
             labels = _dbscan_simple(pts, dbscan_eps_deg, dbscan_min_size)
 
+            # DBSCAN grows clusters by transitive connectivity, so a chain of
+            # neighbors each within eps_deg of the next can merge into one
+            # large "cluster" spanning Ramachandran (typical for disordered
+            # or rapidly-exchanging residues whose retrieved neighbors are
+            # distributed across all basins). The circular mean of such a
+            # spread set collapses toward ~(0°, 0°) — a non-physical result.
+            # Reject these spread clusters up front: the member labels get
+            # flipped to -1 (noise) so basin-populations still see them, but
+            # the cluster itself is dropped before tier assignment.
+            SPREAD_STD_DEG = 50.0
+
             clusters: list[RetrievalCluster] = []
             max_label = int(labels.max()) if labels.size and labels.max() >= 0 else -1
             for cid in range(max_label + 1):
@@ -247,6 +258,10 @@ class FACETRetrieval:
                     continue
                 phi_mean, phi_std = _circular_mean_std_deg(phi_nb[mask])
                 psi_mean, psi_std = _circular_mean_std_deg(psi_nb[mask])
+                if phi_std > SPREAD_STD_DEG or psi_std > SPREAD_STD_DEG:
+                    # Chain-merged spread cluster — demote its members to noise
+                    labels[mask] = -1
+                    continue
                 basin_counts = np.bincount(basin_nb[mask], minlength=4)
                 dominant_basin = int(basin_counts.argmax())
                 clusters.append(RetrievalCluster(
@@ -260,7 +275,8 @@ class FACETRetrieval:
                 ))
             clusters.sort(key=lambda c: -c.size)
 
-            # Basin populations (over clustered neighbors only, normalized to 1)
+            # Basin populations (over clustered neighbors only, normalized to 1).
+            # Uses the updated labels, so demoted spread members don't count.
             clustered_mask = labels >= 0
             if clustered_mask.sum() > 0:
                 basins_clustered = basin_nb[clustered_mask]
@@ -268,9 +284,14 @@ class FACETRetrieval:
                 bp /= bp.sum()
                 basin_populations = bp.tolist()
             else:
-                basin_populations = [0.0, 0.0, 0.0, 0.0]
+                # No tight cluster — fall back to raw neighbor distribution
+                # so the basin populations still reflect SOMETHING about the
+                # retrieved set (helpful for flexible-residue reporting).
+                bp = np.bincount(basin_nb, minlength=4)[:4].astype(np.float32)
+                bp /= max(bp.sum(), 1.0)
+                basin_populations = bp.tolist()
 
-            # Tier assignment
+            # Tier assignment — now only tight clusters can win.
             if len(clusters) == 1 and clusters[0].size >= k - 2:
                 tier = "Strong"
             elif len(clusters) >= 1 and clusters[0].size >= 10:

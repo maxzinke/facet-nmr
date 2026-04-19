@@ -1,15 +1,19 @@
 # FACET: Backbone Torsion Angle Prediction from NMR Chemical Shifts
 
-**FACET** (Fold And Conformation Estimation Tool) predicts backbone phi/psi torsion angles, secondary structure, and chi1 rotamers from NMR backbone chemical shifts (H, HA, N, CA, CB, C).
+**FACET** (Fold And Conformation Estimation Tool) predicts backbone phi/psi torsion angles, secondary structure, chi1 rotamers, and per-residue Ramachandran basin populations from NMR backbone chemical shifts (H, HA, N, CA, CB, C).
 
-FACET v3 surpasses TALOS-N on 27,461 matched residues with identical ground truth:
+**v0.2.0 — retrieval-augmented.** Backs inference with a kNN + DBSCAN lookup over a bundled 253K-residue reference index, emitting multi-modal predictions with TALOS-N-style Strong / Generous / Ambiguous / None tiers plus per-residue alpha/beta/PPII/other populations. Clean 745-protein test benchmark (54,259 paired residues):
 
-| Metric | TALOS-N | FACET v3 |
+| Metric | TALOS-N | **FACET v0.2** |
 |---|---|---|
-| All-residue median | 14.4° | **13.4°** |
-| <15° fraction | 51.7% | **55.0%** |
-| Coil median | 23.1° | **21.1°** |
-| SS Q3 | ~88% | 86.6% |
+| All-residue median | 13.65° | **12.15°** (+1.50°) |
+| fail25 rate | 29.9% | **26.9%** |
+| Coil median | 23.0° | **19.5°** (+3.47°) |
+| Strong tier | — | **9.6° median / 14.5% fail25** on 50% of residues |
+| Coverage | 98.6% | **100%** |
+| Head-to-head | 46.6% wins | **53.4% wins** |
+
+FACET beats TALOS-N on every SS class (helix +0.58°, strand +1.57°, coil +3.47°) and on both rigid (+1.45°) and flexible (+1.02°) subsets. The Strong tier — half the residues — carries 9.6° median error at 14.5% failure rate, making it directly usable for structure calculation restraints.
 
 ## Quick Start
 
@@ -36,12 +40,23 @@ facet predict shifts.tab -o restraints.nef --format nef
 ```python
 from facet import predict
 
+# Default: retrieval-augmented inference (uses bundled reference index)
 result = predict("shifts.tab")
 
 # Per-residue predictions
 for r in result.residues:
     print(f"{r.seq_id} {r.comp_id}: phi={r.phi:.1f} psi={r.psi:.1f} "
-          f"SS={r.ss} conf={r.confidence_class}")
+          f"SS={r.ss} tier={r.retrieval_tier}")
+    if r.basin_populations is not None:
+        a, b, p, o = r.basin_populations
+        print(f"    basin populations: alpha={a:.0%} beta={b:.0%} "
+              f"PPII={p:.0%} other={o:.0%}")
+    if r.alt_clusters:
+        for phi, psi, weight in r.alt_clusters:
+            print(f"    alt cluster: ({phi:.1f}, {psi:.1f}) weight {weight:.2f}")
+
+# Disable retrieval (parametric argmax only — v0.1-compatible)
+result_parametric = predict("shifts.tab", use_retrieval=False)
 
 # Export restraints
 result.to_tbl("restraints.tbl")     # XPLOR/CNS/HADDOCK/ARIA

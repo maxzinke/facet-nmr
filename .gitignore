@@ -6,3 +6,5 @@ build/
 .eggs/
 *.onnx
 *.pt
+!facet/weights/*.pt
+!facet/weights/*.onnx

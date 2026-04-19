@@ -184,13 +184,37 @@ def _load_cached_model(checkpoint_path: str, device_str: str):
     predict() calls in the same process don't re-read the weights file."""
     from .model import FACETv3, FACETv3Config
     dev = torch.device(device_str)
-    config = FACETv3Config()
+    # v0.2+: checkpoints carry the ExpectedErrorHead for calibrated confidence.
+    # use_error_head=True is a superset load — older checkpoints still load
+    # via strict=False.
+    config = FACETv3Config(use_error_head=True)
     model = FACETv3(config).to(dev)
     state = torch.load(checkpoint_path, map_location=dev, weights_only=True)
-    # strict=False: checkpoint may predate the chi1 head addition
+    # strict=False: checkpoint may predate the chi1/error-head additions
     model.load_state_dict(state, strict=False)
     model.eval()
     return model
+
+
+@lru_cache(maxsize=2)
+def _load_cached_retrieval(checkpoint_path: str, index_path: str, device_str: str):
+    """Load FACETRetrieval (encoder + reference index). Cached across calls."""
+    from .retrieval import FACETRetrieval
+    return FACETRetrieval(checkpoint_path, index_path, device=device_str)
+
+
+def _find_index() -> Path | None:
+    """Locate the bundled retrieval index, if any."""
+    import os
+    pkg = Path(__file__).resolve().parent
+    for candidate in [
+        pkg / "weights" / "facet_retrieval_index.npz",
+        Path(os.environ.get("FACET_INDEX", "")) if os.environ.get("FACET_INDEX") else None,
+        Path.home() / ".facet" / "facet_retrieval_index.npz",
+    ]:
+        if candidate is not None and candidate.exists():
+            return candidate
+    return None
 
 
 def _find_checkpoint() -> Path:
@@ -219,6 +243,8 @@ def predict(
     half_window: int = 2,
     batch_size: int = 512,
     deuteration=None,
+    use_retrieval: bool | None = None,
+    retrieval_k: int = 25,
 ) -> FACETResult:
     """Predict backbone torsion angles from chemical shifts.
 
@@ -230,15 +256,18 @@ def predict(
         half_window: Context window (2 = pentapeptide, 3 = heptapeptide).
         batch_size: Inference batch size.
         deuteration: Optional sample deuteration specifier for 13C isotope
-            shift correction. Accepts ``None`` (protonated, default), a
-            preset name (``"protonated"``, ``"perdeut_exchanged"``,
-            ``"perdeut_unexchanged"``, ``"ilv_methyl"``), a ``DeuterationVector``,
-            or a 3-tuple ``(frac_amide, frac_alpha, frac_sidechain)``. When
-            set, CA/CB/C' shifts are corrected to protonated-equivalent values
-            before inference (FACET is trained on protonated-equivalent data).
+            shift correction.
+        use_retrieval: If True, use retrieval-augmented inference (kNN + DBSCAN
+            over a bundled 253K-residue reference index). Produces multi-modal
+            predictions with TALOS-N-style Strong/Generous/Ambiguous/None tiers
+            and per-residue basin populations (alpha/beta/PPII/other). Requires
+            the bundled retrieval index file. If None (default), auto-selects
+            retrieval when the index is available, parametric otherwise.
+        retrieval_k: Number of nearest neighbors to retrieve (default 25).
 
     Returns:
-        FACETResult with per-residue phi, psi, confidence, SS, chi1.
+        FACETResult with per-residue phi, psi, confidence, SS, chi1 (and
+        retrieval_tier + basin_populations when retrieval is used).
     """
     import logging
     logger = logging.getLogger("facet")
@@ -379,6 +408,23 @@ def predict(
     # LRU-cached load — reuses the same model across successive predict() calls
     model = _load_cached_model(str(checkpoint), device)
 
+    # ── Decide retrieval vs parametric ──
+    index_path = _find_index()
+    if use_retrieval is None:
+        use_retrieval = index_path is not None
+    if use_retrieval and index_path is None:
+        logger.warning(
+            "use_retrieval=True but no bundled index found; falling back to parametric. "
+            "Set FACET_INDEX or place facet_retrieval_index.npz in the weights dir."
+        )
+        use_retrieval = False
+
+    retriever = None
+    if use_retrieval:
+        retriever = _load_cached_retrieval(str(checkpoint), str(index_path), device)
+        logger.info("Using retrieval-augmented inference (index: %d residues)",
+                    retriever.n_index)
+
     # Batch inference
     n = len(windows)
     all_phi = np.zeros(n, dtype=np.float64)
@@ -388,6 +434,10 @@ def predict(
     all_chi1 = np.zeros(n, dtype=np.int64)
     all_chi1_probs = np.zeros((n, 3), dtype=np.float32)
     has_chi1_probs = False
+    # Retrieval-only outputs (None when use_retrieval=False)
+    all_tier: list[str | None] = [None] * n
+    all_basin_pops: list[tuple[float, float, float, float] | None] = [None] * n
+    all_alt_clusters: list[list[tuple[float, float, float]] | None] = [None] * n
 
     for start in range(0, n, batch_size):
         end = min(start + batch_size, n)
@@ -398,10 +448,10 @@ def predict(
         b_aa = torch.stack([w["aa_idx"] for w in batch_w]).to(dev)
         b_flags = torch.stack([w["flags"] for w in batch_w]).to(dev)
 
+        # Parametric heads (SS + chi1) always come from the encoder —
+        # those outputs are valid regardless of whether (phi, psi) comes
+        # from argmax or retrieval.
         out = model.predict(b_shifts, b_masks, b_aa, b_flags)
-
-        all_phi[start:end] = np.degrees(out["phi"].cpu().numpy())
-        all_psi[start:end] = np.degrees(out["psi"].cpu().numpy())
         all_conf[start:end] = out["confidence"].cpu().numpy()
         all_ss[start:end] = out["ss_pred"].cpu().numpy()
         if "chi1_pred" in out:
@@ -409,6 +459,35 @@ def predict(
         if "chi1_probs" in out:
             all_chi1_probs[start:end] = out["chi1_probs"].cpu().numpy()
             has_chi1_probs = True
+
+        if use_retrieval:
+            # Replace (phi, psi) with retrieval's top-cluster answer;
+            # attach tier + basin populations + alternative clusters.
+            r_results = retriever.predict(b_shifts, b_masks, b_aa, b_flags, k=retrieval_k)
+            for i, r in enumerate(r_results):
+                idx = start + i
+                if r.clusters:
+                    top = r.clusters[0]
+                    all_phi[idx] = top.phi_deg
+                    all_psi[idx] = top.psi_deg
+                    all_alt_clusters[idx] = [
+                        (c.phi_deg, c.psi_deg, c.weight) for c in r.clusters[1:]
+                    ]
+                else:
+                    # No cluster — fall back to encoder argmax for this residue
+                    all_phi[idx] = float(np.degrees(out["phi"][i].cpu().numpy()))
+                    all_psi[idx] = float(np.degrees(out["psi"][i].cpu().numpy()))
+                    all_alt_clusters[idx] = []
+                all_tier[idx] = r.tier
+                bp = r.basin_populations
+                all_basin_pops[idx] = (
+                    (float(bp[0]), float(bp[1]), float(bp[2]), float(bp[3]))
+                    if bp else None
+                )
+        else:
+            # Parametric argmax path (v0.1 compatible)
+            all_phi[start:end] = np.degrees(out["phi"].cpu().numpy())
+            all_psi[start:end] = np.degrees(out["psi"].cpu().numpy())
 
     # Build result
     SS_LABELS = {0: "H", 1: "E", 2: "C"}
@@ -428,6 +507,9 @@ def predict(
             chi1=int(all_chi1[i]) if has_chi1 else None,
             phi_err=err_bound,
             psi_err=err_bound,
+            retrieval_tier=all_tier[i],
+            basin_populations=all_basin_pops[i],
+            alt_clusters=all_alt_clusters[i],
             chi1_probs=(
                 (float(all_chi1_probs[i, 0]),
                  float(all_chi1_probs[i, 1]),

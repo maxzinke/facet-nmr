@@ -94,13 +94,28 @@ class ResiduePrediction:
     comp_id: str  # 3-letter
     phi: float  # degrees
     psi: float  # degrees
-    confidence: float  # higher = more confident (negative coarse entropy)
+    confidence: float  # higher = more confident (negative coarse entropy or retrieval-mass)
     confidence_class: str  # High / Medium / Low / Flexible
     ss: str  # H / E / C
     chi1: int | None = None  # 0=g+, 1=g-, 2=trans, None=undefined
     phi_err: float = 0.0  # estimated error bound (degrees)
     psi_err: float = 0.0
     chi1_probs: tuple[float, float, float] | None = None  # softmax over (g+, g-, t)
+
+    # ── Retrieval-augmented output (v0.2+) ──
+    # Only populated when predict(..., use_retrieval=True). Absent fields
+    # default to None so existing downstream consumers keep working.
+    retrieval_tier: str | None = None
+    # "Strong" / "Generous" / "Ambiguous" / "None" — analogous to TALOS-N's
+    # Strong/Generous tiers but derived from DBSCAN cluster agreement among
+    # the top-k retrieved neighbors.
+    basin_populations: tuple[float, float, float, float] | None = None
+    # [alpha_R, beta, PPII, other] fractions summing to 1. For flex residues
+    # spectroscopists get a proper distribution, not a single-point fiction.
+    alt_clusters: list[tuple[float, float, float]] | None = None
+    # For residues with multi-modal support: list of (phi_deg, psi_deg, weight)
+    # for alternative clusters beyond the primary one. Empty list when
+    # prediction is single-modal.
 
 
 @dataclass

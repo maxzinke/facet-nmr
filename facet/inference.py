@@ -475,21 +475,40 @@ def predict(
             # Replace (phi, psi) with retrieval's top-cluster answer;
             # attach tier + basin populations + alternative clusters.
             r_results = retriever.predict(b_shifts, b_masks, b_aa, b_flags, k=retrieval_k)
+            # Expected basin by encoder SS (basin index: 0=alpha_R, 1=beta,
+            # 2=PPII, 3=other). We use this to catch cases where retrieval
+            # lands in the wrong Ramachandran region for a residue whose SS
+            # head clearly says otherwise (typical on OOD inputs).
+            _SS_EXPECTED_BASINS = {0: {0}, 1: {1, 2}, 2: {0, 1, 2, 3}}
             for i, r in enumerate(r_results):
                 idx = start + i
                 if r.clusters:
                     top = r.clusters[0]
-                    all_phi[idx] = top.phi_deg
-                    all_psi[idx] = top.psi_deg
-                    all_alt_clusters[idx] = [
-                        (c.phi_deg, c.psi_deg, c.weight) for c in r.clusters[1:]
-                    ]
+                    ss_idx = int(out["ss_pred"][i].cpu().item())
+                    expected = _SS_EXPECTED_BASINS.get(ss_idx, {0, 1, 2, 3})
+                    if top.basin not in expected:
+                        # SS head and retrieved basin disagree — don't trust
+                        # the cluster point estimate. Fall back to encoder
+                        # argmax and mark the residue Flexible.
+                        all_phi[idx] = float(np.degrees(out["phi"][i].cpu().numpy()))
+                        all_psi[idx] = float(np.degrees(out["psi"][i].cpu().numpy()))
+                        all_alt_clusters[idx] = [
+                            (c.phi_deg, c.psi_deg, c.weight) for c in r.clusters
+                        ]
+                        all_tier[idx] = "None"
+                    else:
+                        all_phi[idx] = top.phi_deg
+                        all_psi[idx] = top.psi_deg
+                        all_alt_clusters[idx] = [
+                            (c.phi_deg, c.psi_deg, c.weight) for c in r.clusters[1:]
+                        ]
+                        all_tier[idx] = r.tier
                 else:
                     # No cluster — fall back to encoder argmax for this residue
                     all_phi[idx] = float(np.degrees(out["phi"][i].cpu().numpy()))
                     all_psi[idx] = float(np.degrees(out["psi"][i].cpu().numpy()))
                     all_alt_clusters[idx] = []
-                all_tier[idx] = r.tier
+                    all_tier[idx] = r.tier
                 bp = r.basin_populations
                 all_basin_pops[idx] = (
                     (float(bp[0]), float(bp[1]), float(bp[2]), float(bp[3]))

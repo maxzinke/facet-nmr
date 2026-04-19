@@ -297,13 +297,17 @@ class FACETRetrieval:
                 bp /= max(bp.sum(), 1.0)
                 basin_populations = bp.tolist()
 
-            # Tier assignment — now only tight clusters can win.
-            if len(clusters) == 1 and clusters[0].size >= k - 2:
+            # Tier assignment — Ambiguous check must come FIRST, otherwise two
+            # competing clusters of similar size (e.g. 13 vs 12) hit the
+            # Generous branch before the Ambiguous branch ever sees them and
+            # the user gets a confident label for a fundamentally uncertain
+            # prediction.
+            if len(clusters) >= 2 and clusters[0].size < 2 * clusters[1].size:
+                tier = "Ambiguous"
+            elif len(clusters) == 1 and clusters[0].size >= k - 2:
                 tier = "Strong"
             elif len(clusters) >= 1 and clusters[0].size >= 10:
                 tier = "Generous"
-            elif len(clusters) >= 2 and clusters[0].size < 2 * clusters[1].size:
-                tier = "Ambiguous"
             else:
                 tier = "None"
 

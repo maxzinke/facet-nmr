@@ -486,10 +486,21 @@ def predict(
                     top = r.clusters[0]
                     ss_idx = int(out["ss_pred"][i].cpu().item())
                     expected = _SS_EXPECTED_BASINS.get(ss_idx, {0, 1, 2, 3})
-                    if top.basin not in expected:
-                        # SS head and retrieved basin disagree — don't trust
-                        # the cluster point estimate. Fall back to encoder
-                        # argmax and mark the residue Flexible.
+                    # Catch residual sentinel-attractor hits: a top cluster
+                    # within 10 deg of the Ramachandran origin in basin=other
+                    # is almost always a pull on leftover near-(0,0) entries
+                    # rather than a real bridge/turn. Demote regardless of SS
+                    # (SS=C otherwise accepts any basin and lets this slip).
+                    near_origin_other = (
+                        abs(top.phi_deg) < 10.0
+                        and abs(top.psi_deg) < 10.0
+                        and top.basin == 3
+                    )
+                    if top.basin not in expected or near_origin_other:
+                        # Either SS head and retrieved basin disagree, or the
+                        # cluster hit the near-origin "other" attractor. Don't
+                        # trust the cluster point estimate — fall back to
+                        # encoder argmax and mark Flexible.
                         all_phi[idx] = float(np.degrees(out["phi"][i].cpu().numpy()))
                         all_psi[idx] = float(np.degrees(out["psi"][i].cpu().numpy()))
                         all_alt_clusters[idx] = [

@@ -140,7 +140,7 @@ By default, only **High** residues are written to restraint files (`.tbl`, `.aco
 
 ## Basin populations
 
-For each residue FACET reports the fraction of retrieved neighbors that fall in each of four Ramachandran basins (α_R / β / PPII / other). These are the ensemble-averaged conformational populations — particularly informative for flexible / disordered residues.
+For each residue FACET reports the fraction of retrieved neighbors that fall in each of four Ramachandran basins (α_R / β / PPII / other). These are **geometric sampling fractions**: they tell you which Ramachandran region the retrieved neighbors occupy, not the canonical H/E/C state populations of the ensemble.
 
 | Basin | phi range | psi range | Canonical conformation |
 |---|---|---|---|
@@ -149,7 +149,23 @@ For each residue FACET reports the fraction of retrieved neighbors that fall in 
 | **PPII** | [−90°, −30°] | [+90°, +180°] | Polyproline II / left-twisted extended |
 | **other** | everything else | | Left-handed helix (α_L, mostly GLY), bridges, γ-turns |
 
-A folded α-helix residue with tight retrieval typically shows `α100/β0/P0/o0`. A β-strand: `α0/β90/P10/o0`. An IDR residue sampling multiple geometries might show `α30/β15/P40/o15` — interpret that as 30% helical propensity, 40% PPII, 15% extended β, 15% other.
+A folded α-helix residue with tight retrieval typically shows `α100/β0/P0/o0`. A β-strand: `α0/β90/P10/o0`. An IDR residue sampling multiple geometries might show `α30/β15/P40/o15`.
+
+### Interpretation on disordered samples (IDRs / IDPs)
+
+FACET's basin populations are **not directly equivalent to d2D or CheSPI secondary-structure populations**. They measure different things:
+
+- **FACET** reports *geometric* Ramachandran-region sampling: "what fraction of retrieval neighbors fall in the α_R region of phi/psi space?"
+- **d2D / CheSPI** report *structural* state populations: "what fraction of the ensemble adopts canonical H-bonded α-helix?"
+
+For a rigid folded residue these coincide (the ensemble IS at canonical α); for a disordered residue they diverge. A random-coil residue whose phi/psi samples the broad α region without ever H-bonding is `α100` in FACET but ~5% helix in d2D. Both are correct, just different questions.
+
+**Locations agree, magnitudes systematically differ.** In benchmark comparisons (`docs/validation/idp_compare/` in the repo), FACET's α basin correlates with d2D's Helix population at Pearson r ≈ 0.3–0.85 across a 5-IDP panel — the tools agree on *where* transient structure sits, but FACET's magnitudes are systematically larger because its basins are wider geometric regions rather than tight structural states.
+
+**Practical recommendation for IDP / IDR analysis:**
+- Use FACET's basin populations as a *per-residue Ramachandran-region fingerprint*: identify residues with elevated α, β, or PPII propensity, spot transient-structure regions, characterize disordered tails.
+- For canonical secondary-structure population numbers suitable for ensemble reweighting (BME, ENSEMBLE) or direct SS-population citation, run **d2D** (Camilloni et al. 2012, https://github.com/carlocamilloni/d2D) or **CheSPI** (Nielsen & Mulder 2022) alongside FACET.
+- FACET's value on disordered samples is that the **same output format** carries across folded and disordered residues of the same input — especially useful for partially-folded proteins (folded domain + disordered tail), where it gives you rigid phi/psi restraints on the folded part and a per-residue basin propensity fingerprint on the disordered part, in one pipeline.
 
 ## Model
 

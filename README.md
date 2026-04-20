@@ -82,6 +82,28 @@ print(result.summary())
 
 Auto-detected from file content. NEF and NMR-STAR readers coming soon.
 
+### Minimum shift coverage
+
+FACET was trained on the full backbone (H, HA, N, CA, CB, C). Missing shifts are treated as masked inputs at inference — the model still runs but more residues will fall into Medium/Low/Flexible tiers.
+
+| Available shifts | Expected behaviour |
+|---|---|
+| Full backbone (H, HA, N, CA, CB, C) | Recommended. Paper-reported tier distribution. |
+| Missing HA | Slight quality drop, mostly on coil. Helix/strand largely unaffected. |
+| Missing C' or CB | Noticeable drop on β / PPII discrimination. |
+| Only H, N, CA (e.g. TROSY-HNCA minimal set) | SS prediction workable; phi/psi largely Medium/Low tier. |
+| Only H, N (e.g. 15N HSQC only) | Not recommended. Most residues will be Flexible. |
+
+Formal per-shift ablation numbers will accompany the preprint.
+
+### Perdeuterated samples
+
+For samples with deuterium labeling, set the `--deuteration` flag (or the Gradio dropdown) to `protonated` / `perdeut-exchanged` / `perdeut-unexchanged` / `ilv-methyl`. FACET applies an analytical 13C isotope correction (Venters et al. 1996; Hansen 1988) — roughly +0.29 ppm to CA, +0.68 ppm to CB, +0.10 ppm to C' for standard perdeut-exchanged samples — to recover protonated-equivalent shifts.
+
+**The correction is a first-order average and not perfect.** It uses residue-type-independent coefficients, ignores three-bond effects, and doesn't handle temperature / solvent / labelling-scheme variation. As a result, **perdeuterated samples show systematically more Flexible-tier assignments than equivalent protonated samples** — the encoder's embedding drifts into sparser regions of retrieval space, and FACET honestly flags residues where it can't find a tight cluster instead of emitting confidently-wrong phi/psi.
+
+Typical impact on a folded, perdeuterated protein: expect ~15-25% more residues in Medium/Low/Flexible tiers than on a protonated equivalent. SS prediction is largely unaffected; basin populations still carry signal on Flexible-tier residues. A domain-adapted encoder (Phase 2.1.5) will address this properly in a future release.
+
 ## Output Formats
 
 | Format | Used by | Description |
@@ -110,6 +132,19 @@ Calibration on the 745-protein clean benchmark (53,841 paired residues, retrieva
 
 By default, only **High** residues are written to restraint files (`.tbl`, `.aco`, `.nef`). Use `--include-medium` to add Medium-tier residues (extends coverage to ~95% at the cost of wider bounds), or `--include-all` to emit every residue regardless of tier.
 
+## Basin populations
+
+For each residue FACET reports the fraction of retrieved neighbors that fall in each of four Ramachandran basins (α_R / β / PPII / other). These are the ensemble-averaged conformational populations — particularly informative for flexible / disordered residues.
+
+| Basin | phi range | psi range | Canonical conformation |
+|---|---|---|---|
+| **α_R** | [−180°, −30°] | [−100°, +30°] | Right-handed α-helix |
+| **β** | [−180°, −90°] | [+90°, +180°] ∪ [−180°, −150°] | Extended β-strand |
+| **PPII** | [−90°, −30°] | [+90°, +180°] | Polyproline II / left-twisted extended |
+| **other** | everything else | | Left-handed helix (α_L, mostly GLY), bridges, γ-turns |
+
+A folded α-helix residue with tight retrieval typically shows `α100/β0/P0/o0`. A β-strand: `α0/β90/P10/o0`. An IDR residue sampling multiple geometries might show `α30/β15/P40/o15` — interpret that as 30% helical propensity, 40% PPII, 15% extended β, 15% other.
+
 ## Model
 
 FACET v3 is a 1.29M-parameter local-biased transformer:
@@ -129,5 +164,7 @@ MIT
 
 If you use FACET in your research, please cite:
 ```
-[citation pending]
+Zinke, M. FACET: Retrieval-augmented backbone torsion angle prediction
+from NMR chemical shifts. Manuscript in preparation (2026).
+https://github.com/bluegems661/facet-nmr
 ```

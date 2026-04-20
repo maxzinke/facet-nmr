@@ -60,15 +60,19 @@ def write_tbl(
     n_phi_skip = 0
     n_psi_skip = 0
 
+    # Restraint half-widths are 2 * (1-sigma per-residue err) so the
+    # emitted ± bound covers ~95% of the cluster distribution.
     for r in residues:
         sid = r.seq_id
+        phi_bound = 2.0 * r.phi_err
+        psi_bound = 2.0 * r.psi_err
 
         # PHI: C(i-1) - N(i) - CA(i) - C(i)  — needs (i-1) present
         if (sid - 1) in present_sids:
             lines.append(
                 f"assign (resid {sid - 1} and name C)  (resid {sid} and name N)\n"
                 f"       (resid {sid} and name CA) (resid {sid} and name C)"
-                f"  1.0 {r.phi:7.1f} {r.phi_err:5.1f}"
+                f"  1.0 {r.phi:7.1f} {phi_bound:5.1f}"
             )
             lines.append(f"! PHI {sid} {r.comp_id} ({r.confidence_class})")
         else:
@@ -79,7 +83,7 @@ def write_tbl(
             lines.append(
                 f"assign (resid {sid} and name N)  (resid {sid} and name CA)\n"
                 f"       (resid {sid} and name C)  (resid {sid + 1} and name N)"
-                f"  1.0 {r.psi:7.1f} {r.psi_err:5.1f}"
+                f"  1.0 {r.psi:7.1f} {psi_bound:5.1f}"
             )
             lines.append(f"! PSI {sid} {r.comp_id} ({r.confidence_class})")
         else:
@@ -119,11 +123,15 @@ def write_aco(
     lines.append(f"# {len(residues)} residues")
     lines.append("")
 
+    # CYANA .aco expects hard lo/hi bounds per restraint. Emit 2-sigma
+    # bounds (matches the .tbl format half-widths).
     for r in residues:
-        phi_lo = r.phi - r.phi_err
-        phi_hi = r.phi + r.phi_err
-        psi_lo = r.psi - r.psi_err
-        psi_hi = r.psi + r.psi_err
+        phi_bound = 2.0 * r.phi_err
+        psi_bound = 2.0 * r.psi_err
+        phi_lo = r.phi - phi_bound
+        phi_hi = r.phi + phi_bound
+        psi_lo = r.psi - psi_bound
+        psi_hi = r.psi + psi_bound
         lines.append(f"{r.seq_id:5d} {r.comp_id:4s} PHI  {phi_lo:8.1f} {phi_hi:8.1f}")
         lines.append(f"{r.seq_id:5d} {r.comp_id:4s} PSI  {psi_lo:8.1f} {psi_hi:8.1f}")
 
@@ -207,14 +215,17 @@ def write_nef(
 
     idx = 1
     restraint_id = 1
+    # Use 2-sigma bounds for consistency with .tbl and .aco writers.
     for r in residues:
         sid = r.seq_id
         cc = chain_code
+        phi_bound = 2.0 * r.phi_err
+        psi_bound = 2.0 * r.psi_err
 
         # PHI: C(i-1) - N(i) - CA(i) - C(i) — skip if (i-1) missing
         if (sid - 1) in present_sids:
-            phi_lo = r.phi - r.phi_err
-            phi_hi = r.phi + r.phi_err
+            phi_lo = r.phi - phi_bound
+            phi_hi = r.phi + phi_bound
             lines.append(
                 f"      {idx} {restraint_id} . "
                 f"{cc} {sid - 1} . C "
@@ -227,8 +238,8 @@ def write_nef(
 
         # PSI: N(i) - CA(i) - C(i) - N(i+1) — skip if (i+1) missing
         if (sid + 1) in present_sids:
-            psi_lo = r.psi - r.psi_err
-            psi_hi = r.psi + r.psi_err
+            psi_lo = r.psi - psi_bound
+            psi_hi = r.psi + psi_bound
             lines.append(
                 f"      {idx} {restraint_id} . "
                 f"{cc} {sid} {r.comp_id} N "

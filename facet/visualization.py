@@ -170,6 +170,29 @@ def _draw_strand(ax, x_start, x_end, y_center):
     ax.add_patch(patch)
 
 
+def _draw_coil(ax, x_start, x_end, y_center):
+    """Draw a soft wavy line for a coil run.
+
+    Distinct from the 'no data' background — coil is a positive visual
+    signal (wave glyph), not the absence of a patch. Important for IDP
+    outputs where almost every residue is coil.
+    """
+    import numpy as np
+    # Enough samples for smooth curves even over short runs.
+    n = max(40, int((x_end - x_start + 1) * 10))
+    x = np.linspace(x_start - 0.5, x_end + 0.5, n)
+    amplitude = SS_ELEMENT_HEIGHT * 0.18
+    wavelength = 1.0   # one cycle per residue → looks like a random-coil wiggle
+    y = y_center + amplitude * np.sin(2 * np.pi * x / wavelength)
+    ax.plot(
+        x, y,
+        color=COLOR_BASELINE,
+        linewidth=1.3,
+        solid_capstyle="round",
+        zorder=2,
+    )
+
+
 # ─────────────────────────── Main ────────────────────────────
 
 def plot_sequence_ss(
@@ -399,22 +422,32 @@ def plot_sequence_ss(
                 )
 
         # ── Layer 4: SS cartoon ──
-        # Coil baseline (thin horizontal line)
-        ax.plot(
-            [-0.5, row_len - 0.5],
-            [Y_SS_CENTER, Y_SS_CENTER],
-            color=COLOR_BASELINE,
-            linewidth=1.0,
-            zorder=1,
-        )
-
-        # Draw elements that overlap this row
+        # Build coil runs for this row = everything in [0, row_len) not
+        # covered by any H/E element. Drawn as a soft wavy line so coil
+        # is a positive glyph, not just "no patch here" — important for
+        # IDP outputs where nearly every residue is coil.
+        row_elements = []
         for ss_type, start, end, label in elements:
             if end < p0 or start >= p1:
                 continue
-            row_start = max(start, p0) - p0
-            row_end = min(end, p1 - 1) - p0
+            row_elements.append((
+                ss_type,
+                max(start, p0) - p0,
+                min(end, p1 - 1) - p0,
+                label,
+            ))
+        row_elements.sort(key=lambda e: e[1])
 
+        cursor = 0
+        for _, rs, re_, _ in row_elements:
+            if rs > cursor:
+                _draw_coil(ax, cursor, rs - 1, Y_SS_CENTER)
+            cursor = re_ + 1
+        if cursor < row_len:
+            _draw_coil(ax, cursor, row_len - 1, Y_SS_CENTER)
+
+        # Draw H/E elements on top of the coil wave
+        for ss_type, row_start, row_end, label in row_elements:
             if ss_type == "H":
                 _draw_helix(ax, row_start, row_end, Y_SS_CENTER)
             else:
@@ -448,6 +481,11 @@ def plot_sequence_ss(
     # assigning spurious rigid angles.
     from matplotlib.patches import Patch
     from matplotlib.lines import Line2D
+    # Use a short wavy-line sample as the legend marker for coil so the
+    # legend shape matches what's drawn in the panel.
+    import numpy as np
+    _coil_x = np.linspace(0, 1, 60)
+    _coil_y = 0.4 * np.sin(2 * np.pi * _coil_x / 0.3)
     handles = [
         Patch(facecolor=COLOR_BAR, label="Confidence"),
         Line2D([0], [0], linestyle=(0, (2, 3)), color=COLOR_THRESHOLD,
@@ -460,18 +498,189 @@ def plot_sequence_ss(
                label="Unassigned"),
         Patch(facecolor=COLOR_HELIX, label="α helix"),
         Patch(facecolor=COLOR_STRAND, label="β strand"),
+        Line2D(_coil_x, _coil_y, color=COLOR_BASELINE,
+               linewidth=1.3, label="coil"),
     ]
     fig.legend(
         handles=handles,
         loc="lower center",
         bbox_to_anchor=(0.5, -0.01),
-        ncol=6,
+        ncol=7,
         frameon=False,
         fontsize=9,
     )
 
     # Leave room at top for title and at bottom for legend
     fig.tight_layout(rect=[0, 0.055, 1, 0.96])
+
+    if path is not None:
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(path, dpi=220, bbox_inches="tight", facecolor="white")
+
+    return fig
+
+
+# ───────────────────── IDP residual-SS figure ─────────────────────
+
+# Palette for the four basins — each visually distinct, helix/strand
+# match the main plot's conventions, PPII and "other" get their own hues.
+BASIN_COLORS = {
+    "alpha": "#C0392B",   # red — α_R, same as helix in main plot
+    "beta":  "#1F3A5F",   # navy — β, same as strand
+    "ppii":  "#16A085",   # teal-green — PPII (extended disordered)
+    "other": "#7F8C8D",   # gray — everything else
+}
+BASIN_LABELS = {
+    "alpha": "α_R",
+    "beta":  "β",
+    "ppii":  "PPII",
+    "other": "other",
+}
+
+
+def plot_residual_ss(
+    result: FACETResult,
+    path: str | Path | None = None,
+    residues_per_row: int = 80,
+    title: str | None = None,
+):
+    """Per-residue basin-population figure for flexible / disordered samples.
+
+    For samples where nearly every residue is coil (IDPs, unfolded peptides,
+    disordered regions of folded proteins), the H/E/C cartoon from
+    ``plot_sequence_ss`` carries almost no information. The residual
+    structural signal lives in the **basin populations** — the per-residue
+    α / β / PPII / other fractions from the retrieval neighbours.
+
+    This figure renders that signal as four horizontal tracks (one per
+    basin) along the sequence. Each residue contributes a filled tile
+    whose height is proportional to the basin fraction (0 to 1). Users
+    can read off transient-helix segments (α track elevated), PPII-rich
+    regions, nascent β, etc. directly from the track profiles.
+
+    Requires that the prediction was run with retrieval enabled (the
+    default); residues without ``basin_populations`` render as blank.
+
+    Args:
+        result: FACETResult from ``predict()``.
+        path: Output .png/.pdf/.svg path. None → return fig without saving.
+        residues_per_row: Wrap the sequence after this many residues.
+        title: Optional title override.
+
+    Returns:
+        The matplotlib Figure.
+    """
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    if not result.residues:
+        raise ValueError("result has no residues")
+
+    residues = result.residues
+    seq_id_base = residues[0].seq_id
+    n = residues[-1].seq_id - seq_id_base + 1
+
+    # Build per-position basin arrays (NaN where we have no data).
+    alpha_arr = np.full(n, np.nan)
+    beta_arr = np.full(n, np.nan)
+    ppii_arr = np.full(n, np.nan)
+    other_arr = np.full(n, np.nan)
+    seq_letters = ["-"] * n
+    for r in residues:
+        pos = r.seq_id - seq_id_base
+        seq_letters[pos] = AA_THREE_TO_ONE.get(r.comp_id, "?")
+        if r.basin_populations is not None:
+            a, b, p, o = r.basin_populations
+            alpha_arr[pos] = a
+            beta_arr[pos] = b
+            ppii_arr[pos] = p
+            other_arr[pos] = o
+
+    n_rows = (n + residues_per_row - 1) // residues_per_row
+    fig, axes = plt.subplots(
+        n_rows, 1,
+        figsize=(max(10.0, 0.13 * residues_per_row), 1.55 * n_rows + 0.6),
+        squeeze=False,
+    )
+
+    # Track layout: four tracks stacked vertically, each 1.0 unit tall.
+    # Track y-bases: other=0, ppii=1.1, beta=2.2, alpha=3.3  (alpha on top)
+    track_order = ["other", "ppii", "beta", "alpha"]
+    track_bases = {name: i * 1.15 for i, name in enumerate(track_order)}
+    Y_SEQ_IDP = -0.6
+    Y_NUM_IDP = -1.1
+
+    for row_idx in range(n_rows):
+        ax = axes[row_idx, 0]
+        p0 = row_idx * residues_per_row
+        p1 = min((row_idx + 1) * residues_per_row, n)
+        row_len = p1 - p0
+
+        for name, values in [
+            ("alpha", alpha_arr),
+            ("beta", beta_arr),
+            ("ppii", ppii_arr),
+            ("other", other_arr),
+        ]:
+            color = BASIN_COLORS[name]
+            base = track_bases[name]
+            vals = values[p0:p1]
+            # Draw each residue as a vertical bar. Height = fraction (0-1).
+            # Users can read the envelope at a glance.
+            xs = np.arange(row_len)
+            heights = np.where(np.isnan(vals), 0.0, vals)
+            ax.bar(
+                xs, heights,
+                width=1.0,
+                bottom=base,
+                color=color,
+                edgecolor="none",
+                zorder=2,
+            )
+            # Track baseline
+            ax.plot(
+                [-0.5, row_len - 0.5], [base, base],
+                color="#D5D8DC", linewidth=0.7, zorder=1,
+            )
+            # Track label
+            ax.text(
+                -1.8, base + 0.5, BASIN_LABELS[name],
+                ha="right", va="center",
+                fontsize=10, fontweight="bold",
+                color=color,
+            )
+
+        # Sequence letters below tracks
+        for p in range(p0, p1):
+            ax.text(
+                p - p0, Y_SEQ_IDP, seq_letters[p],
+                ha="center", va="center",
+                fontsize=8, family="monospace",
+                color=COLOR_SEQ,
+            )
+
+        # Residue numbers every 10
+        start_id = p0 + seq_id_base
+        end_id = p1 + seq_id_base - 1
+        first_tick = start_id + ((10 - start_id % 10) % 10)
+        for rid in range(first_tick, end_id + 1, 10):
+            ax.text(
+                rid - seq_id_base - p0, Y_NUM_IDP, str(rid),
+                ha="center", va="center",
+                fontsize=8, color=COLOR_NUM,
+            )
+
+        ax.set_xlim(-2.5, residues_per_row + 0.5)
+        ax.set_ylim(Y_NUM_IDP - 0.3, track_bases["alpha"] + 1.15)
+        ax.axis("off")
+
+    if title is None:
+        source = result.source or "FACET"
+        title = f"Residual SS populations — {Path(source).stem if source else 'prediction'}"
+    fig.suptitle(title, fontsize=12, y=0.995, fontweight="bold", color=COLOR_SEQ)
+
+    fig.tight_layout(rect=[0, 0.02, 1, 0.96])
 
     if path is not None:
         path = Path(path)

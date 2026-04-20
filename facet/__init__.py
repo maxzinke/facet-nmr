@@ -28,6 +28,16 @@ def plot_sequence_ss(*args, **kwargs):
     return _impl(*args, **kwargs)
 
 
+def plot_residual_ss(*args, **kwargs):
+    """Lazy import wrapper — matplotlib is an optional dependency.
+
+    IDP-mode figure: four per-basin tracks along the sequence. Use for
+    flexible / disordered samples where plot_sequence_ss degenerates.
+    """
+    from .visualization import plot_residual_ss as _impl
+    return _impl(*args, **kwargs)
+
+
 __all__ = [
     "__version__",
     "predict",
@@ -35,4 +45,5 @@ __all__ = [
     "ResiduePrediction",
     "ShiftList",
     "plot_sequence_ss",
+    "plot_residual_ss",
 ]

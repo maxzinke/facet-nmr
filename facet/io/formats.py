@@ -108,8 +108,10 @@ class ResiduePrediction:
     confidence_class: str  # High / Medium / Low / Flexible
     ss: str  # H / E / C
     chi1: int | None = None  # 0=g+, 1=g-, 2=trans, None=undefined
-    phi_err: float = 0.0  # estimated error bound (degrees)
-    psi_err: float = 0.0
+    phi_err: float = 0.0  # 1-sigma circular std of the retrieval cluster in
+                          # degrees (tier-bound fallback when retrieval off).
+    psi_err: float = 0.0  # 1-sigma; restraint writers emit 2*err as the
+                          # half-width for ~95% coverage.
     chi1_probs: tuple[float, float, float] | None = None  # softmax over (g+, g-, t)
 
     # ── Retrieval-augmented output (v0.2+) ──
@@ -133,6 +135,9 @@ class FACETResult:
     sequence: str = ""  # full one-letter sequence as reported by the reader, or
                         # empty if the source format doesn't carry it.
     seq_id_start: int = 1  # seq_id that sequence[0] corresponds to
+    # Retrieval-index provenance (v0.2+). Populated when retrieval is used.
+    index_version: str = ""
+    index_n_residues: int = 0
 
     @property
     def n_residues(self) -> int:
@@ -202,8 +207,14 @@ class FACETResult:
     def summary(self) -> str:
         """Format a per-residue prediction summary as a plain-text table."""
         CHI1_NAMES = {0: "g+", 1: "g-", 2: "t"}
+        header = f"FACET prediction: {self.n_residues} residues from {self.source}"
+        if self.index_version:
+            header += (
+                f" | retrieval index: {self.index_version} "
+                f"({self.index_n_residues:,} residues)"
+            )
         lines = [
-            f"FACET prediction: {self.n_residues} residues from {self.source}",
+            header,
             "",
             f"  {'ResID':>5s} {'AA':>4s} {'PHI':>8s} {'PSI':>8s} {'dPHI':>6s} {'dPSI':>6s} {'SS':>3s} {'CHI1':>5s} {'Tier':>9s}",
         ]

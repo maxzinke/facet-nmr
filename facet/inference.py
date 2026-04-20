@@ -441,6 +441,13 @@ def predict(
     all_tier: list[str | None] = [None] * n
     all_basin_pops: list[tuple[float, float, float, float] | None] = [None] * n
     all_alt_clusters: list[list[tuple[float, float, float]] | None] = [None] * n
+    # Per-residue 1-sigma error bounds (degrees). Populated from the
+    # retrieval cluster's circular std when retrieval is used and a
+    # tight cluster is found; otherwise falls back to a tier-based
+    # entropy bound from _estimate_error_bound. Restraint writers then
+    # widen to 2-sigma for the emitted bound.
+    all_phi_err = np.zeros(n, dtype=np.float64)
+    all_psi_err = np.zeros(n, dtype=np.float64)
 
     # DBSCAN cluster-quality labels map onto FACET's native tier vocabulary.
     _RETRIEVAL_TIER_TO_CONF = {
@@ -507,6 +514,8 @@ def predict(
                             (c.phi_deg, c.psi_deg, c.weight) for c in r.clusters
                         ]
                         all_tier[idx] = "None"
+                        # No trustworthy cluster — leave per-residue err at 0
+                        # so the fallback tier bound kicks in below.
                     else:
                         all_phi[idx] = top.phi_deg
                         all_psi[idx] = top.psi_deg
@@ -514,6 +523,15 @@ def predict(
                             (c.phi_deg, c.psi_deg, c.weight) for c in r.clusters[1:]
                         ]
                         all_tier[idx] = r.tier
+                        # 1-sigma per-residue uncertainty from the cluster's
+                        # circular std. Floor at 3 deg so restraint writers
+                        # never emit a bound smaller than the model's coarse
+                        # Ramachandran grid resolution (10 deg / 2 = 5 deg, with
+                        # some margin). Clip at 25 deg: above that we cap
+                        # because the 2-sigma restraint would exceed 50 deg
+                        # and be meaningless for structure calculation.
+                        all_phi_err[idx] = max(3.0, min(25.0, top.phi_std_deg))
+                        all_psi_err[idx] = max(3.0, min(25.0, top.psi_std_deg))
                 else:
                     # No cluster — fall back to encoder argmax for this residue
                     all_phi[idx] = float(np.degrees(out["phi"][i].cpu().numpy()))
@@ -535,7 +553,9 @@ def predict(
     residues: list[ResiduePrediction] = []
     for i in range(n):
         conf = float(all_conf[i])
-        err_bound = _estimate_error_bound(conf)
+        fallback_err = _estimate_error_bound(conf) / 2.0  # half-width -> 1-sigma
+        phi_err = all_phi_err[i] if all_phi_err[i] > 0 else fallback_err
+        psi_err = all_psi_err[i] if all_psi_err[i] > 0 else fallback_err
         has_chi1 = comp_ids[i] not in ("GLY", "ALA")
         # In retrieval mode, DBSCAN cluster quality drives the tier; the
         # entropy-based class is used only when retrieval is disabled.
@@ -552,8 +572,8 @@ def predict(
             confidence_class=tier,
             ss=SS_LABELS.get(int(all_ss[i]), "C"),
             chi1=int(all_chi1[i]) if has_chi1 else None,
-            phi_err=err_bound,
-            psi_err=err_bound,
+            phi_err=float(phi_err),
+            psi_err=float(psi_err),
             basin_populations=all_basin_pops[i],
             alt_clusters=all_alt_clusters[i],
             chi1_probs=(
@@ -569,4 +589,6 @@ def predict(
         source=shift_list.source,
         sequence=shift_list.sequence,
         seq_id_start=shift_list.seq_id_start,
+        index_version=(retriever.index_version if retriever is not None else ""),
+        index_n_residues=(retriever.n_index if retriever is not None else 0),
     )

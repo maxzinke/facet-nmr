@@ -175,6 +175,13 @@ class FACETRetrieval:
         self.aa_idx = data["aa_idx"]
         # Optional source flag (0=BMRB, 1=Phase2.1) — safe default if absent
         self.source = data["source"] if "source" in data.files else np.zeros(len(emb), dtype=np.int8)
+        # Optional version metadata — safe defaults if absent
+        self.index_version = (
+            str(data["index_version"]) if "index_version" in data.files else "unknown"
+        )
+        self.index_source = (
+            str(data["index_source"]) if "index_source" in data.files else "unknown"
+        )
         self.n_index = len(self.embeddings_normed)
         self.embed_dim = int(self.embeddings_normed.shape[1])
 

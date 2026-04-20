@@ -247,6 +247,23 @@ def plot_sequence_ss(
         else (result.seq_id_start if display_sequence else 1)
     )
 
+    # Sanity-check the sequence length against the assignment span. NMR-STAR
+    # readers sometimes return a single-character placeholder (e.g. ".") as
+    # a polymer sequence, which would collapse the plot to one position and
+    # render it empty. Reject any sequence too short to cover the assigned
+    # residues.
+    if display_sequence:
+        min_required = residues[-1].seq_id - display_seq_id_start + 1
+        if len(display_sequence) < max(min_required, len(residues)):
+            import logging
+            logging.getLogger("facet").warning(
+                "Reader-supplied sequence (len=%d) is shorter than the "
+                "assigned residue span (%d) — ignoring and using "
+                "assignment-driven rendering.",
+                len(display_sequence), min_required,
+            )
+            display_sequence = ""
+
     # Sanity-check the sequence against the assigned residues. If > 20% of
     # assigned positions disagree with the sequence letter, drop the sequence
     # and fall back to placeholder rendering — most likely the reader picked
@@ -542,14 +559,18 @@ BASIN_LABELS = {
 def plot_residual_ss(
     result: FACETResult,
     path: str | Path | None = None,
-    residues_per_row: int = 80,
+    residues_per_row: int = 60,
     title: str | None = None,
 ):
     """Per-residue basin-population figure for flexible / disordered samples.
 
-    For samples where nearly every residue is coil (IDPs, unfolded peptides,
-    disordered regions of folded proteins), the H/E/C cartoon from
-    ``plot_sequence_ss`` carries almost no information. The residual
+    Visual twin of ``plot_sequence_ss`` — same figure width, row wrap,
+    fonts, and palette so the two figures can be shown side-by-side
+    without jarring style mismatches.
+
+    For samples where nearly every residue is coil (IDPs, unfolded
+    peptides, disordered regions of folded proteins), the H/E/C cartoon
+    from ``plot_sequence_ss`` carries almost no information. The residual
     structural signal lives in the **basin populations** — the per-residue
     α / β / PPII / other fractions from the retrieval neighbours.
 
@@ -565,7 +586,8 @@ def plot_residual_ss(
     Args:
         result: FACETResult from ``predict()``.
         path: Output .png/.pdf/.svg path. None → return fig without saving.
-        residues_per_row: Wrap the sequence after this many residues.
+        residues_per_row: Wrap the sequence after this many residues
+            (default 60 — matches ``plot_sequence_ss``).
         title: Optional title override.
 
     Returns:
@@ -577,45 +599,59 @@ def plot_residual_ss(
     if not result.residues:
         raise ValueError("result has no residues")
 
-    residues = result.residues
+    # Sort by seq_id so gap handling and position math match plot_sequence_ss.
+    residues = sorted(result.residues, key=lambda r: r.seq_id)
     seq_id_base = residues[0].seq_id
-    n = residues[-1].seq_id - seq_id_base + 1
+    total_positions = residues[-1].seq_id - seq_id_base + 1
 
     # Build per-position basin arrays (NaN where we have no data).
-    alpha_arr = np.full(n, np.nan)
-    beta_arr = np.full(n, np.nan)
-    ppii_arr = np.full(n, np.nan)
-    other_arr = np.full(n, np.nan)
-    seq_letters = ["-"] * n
+    alpha_arr = np.full(total_positions, np.nan)
+    beta_arr = np.full(total_positions, np.nan)
+    ppii_arr = np.full(total_positions, np.nan)
+    other_arr = np.full(total_positions, np.nan)
+    seq_letters = ["·"] * total_positions
     for r in residues:
         pos = r.seq_id - seq_id_base
-        seq_letters[pos] = AA_THREE_TO_ONE.get(r.comp_id, "?")
-        if r.basin_populations is not None:
-            a, b, p, o = r.basin_populations
-            alpha_arr[pos] = a
-            beta_arr[pos] = b
-            ppii_arr[pos] = p
-            other_arr[pos] = o
+        if 0 <= pos < total_positions:
+            seq_letters[pos] = AA_THREE_TO_ONE.get(r.comp_id, "X")
+            if r.basin_populations is not None:
+                a, b, p, o = r.basin_populations
+                alpha_arr[pos] = a
+                beta_arr[pos] = b
+                ppii_arr[pos] = p
+                other_arr[pos] = o
 
-    n_rows = (n + residues_per_row - 1) // residues_per_row
+    n_rows = math.ceil(total_positions / residues_per_row)
+    # Match plot_sequence_ss row-height budget so the two figures visually
+    # stack at the same cadence.
+    row_height_in = 1.6
+
     fig, axes = plt.subplots(
         n_rows, 1,
-        figsize=(max(10.0, 0.13 * residues_per_row), 1.55 * n_rows + 0.6),
+        figsize=(14, row_height_in * n_rows + 0.6),
         squeeze=False,
     )
+    axes = axes.flatten()
 
-    # Track layout: four tracks stacked vertically, each 1.0 unit tall.
-    # Track y-bases: other=0, ppii=1.1, beta=2.2, alpha=3.3  (alpha on top)
+    # Track layout inside each row: four tracks stacked vertically with
+    # a small gap, each track 1.0 unit tall. Y_SEQ/Y_NUM mirror the
+    # sequence-plot offsets so the two figures line up visually.
     track_order = ["other", "ppii", "beta", "alpha"]
-    track_bases = {name: i * 1.15 for i, name in enumerate(track_order)}
-    Y_SEQ_IDP = -0.6
-    Y_NUM_IDP = -1.1
+    TRACK_HEIGHT = 1.0
+    TRACK_GAP = 0.15
+    track_bases = {
+        name: i * (TRACK_HEIGHT + TRACK_GAP) for i, name in enumerate(track_order)
+    }
+    Y_TOP = track_bases["alpha"] + TRACK_HEIGHT
+    Y_SEQ_IDP = -0.7
+    Y_NUM_IDP = -1.35
 
     for row_idx in range(n_rows):
-        ax = axes[row_idx, 0]
+        ax = axes[row_idx]
         p0 = row_idx * residues_per_row
-        p1 = min((row_idx + 1) * residues_per_row, n)
+        p1 = min(p0 + residues_per_row, total_positions)
         row_len = p1 - p0
+        xs = np.arange(row_len)
 
         for name, values in [
             ("alpha", alpha_arr),
@@ -626,13 +662,10 @@ def plot_residual_ss(
             color = BASIN_COLORS[name]
             base = track_bases[name]
             vals = values[p0:p1]
-            # Draw each residue as a vertical bar. Height = fraction (0-1).
-            # Users can read the envelope at a glance.
-            xs = np.arange(row_len)
             heights = np.where(np.isnan(vals), 0.0, vals)
             ax.bar(
                 xs, heights,
-                width=1.0,
+                width=0.82,        # match sequence-plot bar width
                 bottom=base,
                 color=color,
                 edgecolor="none",
@@ -643,44 +676,69 @@ def plot_residual_ss(
                 [-0.5, row_len - 0.5], [base, base],
                 color="#D5D8DC", linewidth=0.7, zorder=1,
             )
-            # Track label
+            # Track label — match sequence-plot label font size (9, bold)
             ax.text(
-                -1.8, base + 0.5, BASIN_LABELS[name],
+                -1.5, base + TRACK_HEIGHT / 2, BASIN_LABELS[name],
                 ha="right", va="center",
-                fontsize=10, fontweight="bold",
+                fontsize=9, fontweight="bold",
                 color=color,
             )
 
-        # Sequence letters below tracks
-        for p in range(p0, p1):
+        # Sequence letters — same font/size/color as plot_sequence_ss.
+        for i, pos in enumerate(range(p0, p1)):
             ax.text(
-                p - p0, Y_SEQ_IDP, seq_letters[p],
+                i, Y_SEQ_IDP, seq_letters[pos],
                 ha="center", va="center",
-                fontsize=8, family="monospace",
+                fontsize=10, fontfamily="monospace",
                 color=COLOR_SEQ,
             )
 
-        # Residue numbers every 10
-        start_id = p0 + seq_id_base
-        end_id = p1 + seq_id_base - 1
-        first_tick = start_id + ((10 - start_id % 10) % 10)
-        for rid in range(first_tick, end_id + 1, 10):
-            ax.text(
-                rid - seq_id_base - p0, Y_NUM_IDP, str(rid),
-                ha="center", va="center",
-                fontsize=8, color=COLOR_NUM,
-            )
+        # Residue numbers — same cadence + style as plot_sequence_ss
+        # (every 10 + row termini).
+        for i, pos in enumerate(range(p0, p1)):
+            seq_id = pos + seq_id_base
+            if seq_id % 10 == 0 or i == 0 or i == row_len - 1:
+                ax.text(
+                    i, Y_NUM_IDP, str(seq_id),
+                    ha="center", va="center",
+                    fontsize=7,
+                    color=COLOR_NUM,
+                )
 
-        ax.set_xlim(-2.5, residues_per_row + 0.5)
-        ax.set_ylim(Y_NUM_IDP - 0.3, track_bases["alpha"] + 1.15)
+        # Keep the x-range identical across rows so the two figures align
+        # when stacked (partial last row → short content but full x-extent).
+        ax.set_xlim(-2.5, residues_per_row)
+        ax.set_ylim(Y_NUM_IDP - 0.25, Y_TOP + 0.15)
         ax.axis("off")
 
     if title is None:
         source = result.source or "FACET"
-        title = f"Residual SS populations — {Path(source).stem if source else 'prediction'}"
-    fig.suptitle(title, fontsize=12, y=0.995, fontweight="bold", color=COLOR_SEQ)
+        title = (
+            f"Residual SS populations — "
+            f"{Path(source).stem if source else 'prediction'}"
+        )
+    # Match plot_sequence_ss title styling.
+    fig.suptitle(title, fontsize=12, y=0.99, fontweight="bold", color=COLOR_SEQ)
 
-    fig.tight_layout(rect=[0, 0.02, 1, 0.96])
+    # Legend block (basin colors) — placed bottom-center to mirror the
+    # sequence-plot legend.
+    from matplotlib.patches import Patch
+    handles = [
+        Patch(facecolor=BASIN_COLORS["alpha"], label="α_R"),
+        Patch(facecolor=BASIN_COLORS["beta"],  label="β"),
+        Patch(facecolor=BASIN_COLORS["ppii"],  label="PPII"),
+        Patch(facecolor=BASIN_COLORS["other"], label="other"),
+    ]
+    fig.legend(
+        handles=handles,
+        loc="lower center",
+        bbox_to_anchor=(0.5, -0.01),
+        ncol=4,
+        frameon=False,
+        fontsize=9,
+    )
+
+    fig.tight_layout(rect=[0, 0.055, 1, 0.96])
 
     if path is not None:
         path = Path(path)

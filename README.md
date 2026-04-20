@@ -2,18 +2,20 @@
 
 **FACET** (Fold And Conformation Estimation Tool) predicts backbone phi/psi torsion angles, secondary structure, chi1 rotamers, and per-residue Ramachandran basin populations from NMR backbone chemical shifts (H, HA, N, CA, CB, C).
 
-**v0.2.0 — retrieval-augmented.** Inference is backed by a kNN + DBSCAN lookup over a bundled 253K-residue reference index, producing multi-modal predictions with per-residue FACET tiers (High / Medium / Low / Flexible) plus alpha / beta / PPII / other basin populations. Clean 745-protein test benchmark (54,259 paired residues):
+**v0.2.0 — retrieval-augmented.** Inference is backed by a kNN + DBSCAN lookup over a bundled 220K-residue reference index, producing multi-modal predictions with per-residue FACET tiers (High / Medium / Low / Flexible) plus alpha / beta / PPII / other basin populations. Clean 745-protein test benchmark (53,841 paired residues):
 
 | Metric | Reference baseline | **FACET v0.2** |
 |---|---|---|
-| All-residue median | 13.65° | **12.15°** (−1.50°) |
-| fail25 rate | 29.9% | **26.9%** |
-| Coil median | 23.0° | **19.5°** (−3.47°) |
-| High-tier residues (~50%) | — | **9.6° median / 14.5% fail25** |
-| Coverage | 98.6% | **100%** |
-| Head-to-head win rate | 46.6% | **53.4%** |
+| All-residue median | 13.57° | **12.65°** (−0.92°) |
+| fail25 rate | 29.6% | **27.4%** |
+| Coil median | 22.8° | **20.9°** (−1.92°) |
+| Helix median | 8.5° | **8.0°** (−0.46°) |
+| Strand median | 15.3° | **14.6°** (−0.72°) |
+| High-tier residues (76%) | — | **10.6° median / 19.6% fail25** |
+| Coverage | 98.6% | **99.2%** |
+| Head-to-head win rate | 45.9% | **52.1%** |
 
-FACET wins on every SS class (helix −0.58°, strand −1.57°, coil −3.47°) and on both rigid (−1.45°) and flexible (−1.02°) subsets. The High tier — half the residues — carries 9.6° median error at 14.5% failure rate, making it directly usable for structure calculation restraints.
+FACET wins on every SS class and on both rigid (−0.77°) and flexible (−1.76°) subsets. The **High tier — 76% of residues — carries 10.6° median error at 19.6% failure rate**, making it directly usable for structure calculation restraints.
 
 ## Quick Start
 
@@ -34,7 +36,7 @@ facet predict shifts.tab --all
 # Specific format
 facet predict shifts.tab -o restraints.nef --format nef
 
-# Broaden restraint output to Medium tier (reaches ~98% coverage)
+# Broaden restraint output to Medium tier
 facet predict shifts.tab --include-medium
 ```
 
@@ -95,18 +97,18 @@ Auto-detected from file content. NEF and NMR-STAR readers coming soon.
 
 FACET assigns each residue to one of four tiers. In retrieval mode (default) the tier comes from DBSCAN cluster agreement among the top-25 retrieved neighbors; in parametric mode it comes from the entropy of the coarse Ramachandran head. The vocabulary — **High / Medium / Low / Flexible** — is shared across both modes.
 
-Calibration on the 745-protein clean benchmark (54,259 paired residues, retrieval mode):
+Calibration on the 745-protein clean benchmark (53,841 paired residues, retrieval mode):
 
 | Tier | Coverage | Median err | fail25 | Restraint bound | Use for restraints? |
 |---|---|---|---|---|---|
-| **High** | 50.5% | 9.6° | 14.5% | ±16° | **Yes** (default) |
-| **Medium** | 47.5% | 16.5° | 38.2% | ±24° | With `--include-medium` |
-| **Low** | 1.7% | 73.8° | 76.5% | — | No — multi-modal |
-| **Flexible** | 0.3% | 65.2° | — | — | No — disordered |
+| **High** | 76.4% | 10.6° | 19.6% | ±20° | **Yes** (default) |
+| **Medium** | 18.3% | 24.5° | 49.3% | ±35° | With `--include-medium` (use cautiously) |
+| **Low** | 3.7% | 65.0° | 71.0% | — | No — multi-modal |
+| **Flexible** | 0.8% | — | — | — | No — disordered / no cluster |
 
 **Flexible is not a failure state.** It flags residues whose retrieved neighbors do not form a coherent cluster — the chemical shifts are consistent with conformational averaging (flexible loops, disordered tails). These residues should be excluded from structure-calculation restraints, but the Flexible label itself carries biological meaning; the per-residue basin populations give you the alpha / beta / PPII / other mix directly.
 
-By default, only **High** residues are written to restraint files (`.tbl`, `.aco`, `.nef`). Use `--include-medium` to add Medium-tier residues (brings coverage to ~98%), or `--include-all` to emit every residue regardless of tier.
+By default, only **High** residues are written to restraint files (`.tbl`, `.aco`, `.nef`). Use `--include-medium` to add Medium-tier residues (extends coverage to ~95% at the cost of wider bounds), or `--include-all` to emit every residue regardless of tier.
 
 ## Model
 
@@ -116,7 +118,7 @@ FACET v3 is a 1.29M-parameter local-biased transformer:
 - **Torsion head**: 36×36 coarse Ramachandran grid + circular fine residual
 - **SS head**: 3-class (H/E/C) with soft conditioning into torsion
 - **Chi1 head**: 3-class rotamer (gauche+/gauche-/trans)
-- **Retrieval (v0.2)**: kNN + DBSCAN over 253K reference residue embeddings
+- **Retrieval (v0.2)**: kNN + DBSCAN over 220K reference residue embeddings
 - Trained on 5,000 proteins (443K residues) from BMRB + PDB
 
 ## License

@@ -245,6 +245,7 @@ def predict(
     deuteration=None,
     use_retrieval: bool | None = None,
     retrieval_k: int = 25,
+    auto_reference: bool = False,
 ) -> FACETResult:
     """Predict backbone torsion angles from chemical shifts.
 
@@ -265,6 +266,11 @@ def predict(
             retrieval index file. If None (default), auto-selects retrieval
             when the index is available, parametric otherwise.
         retrieval_k: Number of nearest neighbors to retrieve (default 25).
+        auto_reference: If True, run the shift-referencing sanity check and
+            apply its suggested per-nucleus corrections before prediction.
+            Only corrections that exceeded the tolerance threshold are
+            applied (well-referenced channels stay untouched). The applied
+            offsets are reported in ``result.referencing_corrections_applied``.
 
     Returns:
         FACETResult with per-residue phi, psi, confidence, confidence_class
@@ -396,8 +402,35 @@ def predict(
     # Composition-adaptive: if mean secondary shift per nucleus deviates
     # from what the protein's apparent H/E/C mix would predict, warn the
     # user (likely miscalibration). Non-fatal — predictions still run.
-    from .referencing import check_referencing
+    from .referencing import check_referencing, _TOLERANCE_PPM
     ref_report = check_referencing(shifts, masks, comp_ids)
+
+    applied_corrections: dict[str, float] = {}
+    if auto_reference and ref_report.has_warnings:
+        # Apply the suggested corrections IN PLACE on the shift array.
+        # Only per-nucleus offsets that exceed the tolerance are applied
+        # (well-referenced channels stay untouched). We then re-run the
+        # check so the FACETResult carries the POST-correction summary
+        # and warnings list — users see what we fixed, not what was wrong.
+        _NUC_COL = {"H": 0, "HA": 1, "N": 2, "CA": 3, "CB": 4, "C": 5}
+        for nuc, off in ref_report.offsets.items():
+            if abs(off) > _TOLERANCE_PPM.get(nuc, 0.5):
+                col = _NUC_COL.get(nuc)
+                if col is None:
+                    continue
+                # Subtract the observed offset from every observed shift
+                # on that nucleus.
+                col_mask = masks[:, col] > 0
+                shifts[col_mask, col] = shifts[col_mask, col] - off
+                applied_corrections[nuc] = float(off)
+        if applied_corrections:
+            logger.info(
+                "auto_reference: applied corrections "
+                + ", ".join(f"{n} {-v:+.2f}" for n, v in applied_corrections.items())
+            )
+            # Re-run the check to produce post-correction summary
+            ref_report = check_referencing(shifts, masks, comp_ids)
+
     if ref_report.has_warnings:
         logger.warning("Referencing sanity check raised warnings:")
         for w in ref_report.warnings:
@@ -606,4 +639,5 @@ def predict(
         index_n_residues=(retriever.n_index if retriever is not None else 0),
         referencing_warnings=ref_report.warnings,
         referencing_summary=ref_report.summary(),
+        referencing_corrections_applied=applied_corrections,
     )

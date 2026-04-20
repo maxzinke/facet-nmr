@@ -143,6 +143,11 @@ class FACETResult:
     # the input passed the check.
     referencing_warnings: list[str] = field(default_factory=list)
     referencing_summary: str = ""
+    # When auto_reference=True in predict(), the per-nucleus offsets
+    # (ppm) that were subtracted from the input before prediction.
+    # Empty when auto-correction was disabled or no nucleus exceeded
+    # tolerance.
+    referencing_corrections_applied: dict[str, float] = field(default_factory=dict)
 
     @property
     def n_residues(self) -> int:

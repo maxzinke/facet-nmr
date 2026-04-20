@@ -138,6 +138,11 @@ class FACETResult:
     # Retrieval-index provenance (v0.2+). Populated when retrieval is used.
     index_version: str = ""
     index_n_residues: int = 0
+    # Referencing sanity-check output (v0.2.2+). List of one-line warnings
+    # plus a short summary string for status displays. Empty list means
+    # the input passed the check.
+    referencing_warnings: list[str] = field(default_factory=list)
+    referencing_summary: str = ""
 
     @property
     def n_residues(self) -> int:

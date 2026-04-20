@@ -68,11 +68,12 @@ def write_tbl(
         psi_bound = 2.0 * r.psi_err
 
         # PHI: C(i-1) - N(i) - CA(i) - C(i)  — needs (i-1) present
+        # XPLOR DIHE syntax: <Kf> <target_deg> <range_deg> <exponent>
         if (sid - 1) in present_sids:
             lines.append(
                 f"assign (resid {sid - 1} and name C)  (resid {sid} and name N)\n"
                 f"       (resid {sid} and name CA) (resid {sid} and name C)"
-                f"  1.0 {r.phi:7.1f} {phi_bound:5.1f}"
+                f"  1.0 {r.phi:7.1f} {phi_bound:5.1f} 2"
             )
             lines.append(f"! PHI {sid} {r.comp_id} ({r.confidence_class})")
         else:
@@ -83,7 +84,7 @@ def write_tbl(
             lines.append(
                 f"assign (resid {sid} and name N)  (resid {sid} and name CA)\n"
                 f"       (resid {sid} and name C)  (resid {sid + 1} and name N)"
-                f"  1.0 {r.psi:7.1f} {psi_bound:5.1f}"
+                f"  1.0 {r.psi:7.1f} {psi_bound:5.1f} 2"
             )
             lines.append(f"! PSI {sid} {r.comp_id} ({r.confidence_class})")
         else:

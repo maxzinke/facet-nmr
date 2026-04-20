@@ -392,6 +392,19 @@ def predict(
             n_heavy_starved,
         )
 
+    # ── Referencing sanity check ──
+    # Composition-adaptive: if mean secondary shift per nucleus deviates
+    # from what the protein's apparent H/E/C mix would predict, warn the
+    # user (likely miscalibration). Non-fatal — predictions still run.
+    from .referencing import check_referencing
+    ref_report = check_referencing(shifts, masks, comp_ids)
+    if ref_report.has_warnings:
+        logger.warning("Referencing sanity check raised warnings:")
+        for w in ref_report.warnings:
+            logger.warning("  %s", w)
+    else:
+        logger.info(ref_report.summary())
+
     # Convert to secondary shifts
     sec_shifts = to_secondary_shifts(shifts, masks, comp_ids)
 
@@ -591,4 +604,6 @@ def predict(
         seq_id_start=shift_list.seq_id_start,
         index_version=(retriever.index_version if retriever is not None else ""),
         index_n_residues=(retriever.n_index if retriever is not None else 0),
+        referencing_warnings=ref_report.warnings,
+        referencing_summary=ref_report.summary(),
     )

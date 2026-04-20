@@ -96,6 +96,12 @@ FACET was trained on the full backbone (H, HA, N, CA, CB, C). Missing shifts are
 
 Formal per-shift ablation numbers will accompany the preprint.
 
+### Chemical shift referencing
+
+FACET was trained on BMRB-deposited shifts referenced against **DSS** (per the IUPAC/BMRB convention — 1H directly, 13C and 15N indirectly via frequency ratios). Before prediction, FACET runs a composition-adaptive sanity check: per-nucleus secondary-shift means are compared to what the protein's apparent secondary-structure composition would predict, and warnings surface if any systematic offset exceeds the tolerance (roughly ±0.4 ppm on 13C, ±1.5 ppm on 15N). When warnings fire the output includes a suggested additive correction per nucleus.
+
+The check catches mis-referencing on N, HA, H, C', and CB reliably. It is weakest on CA-only offsets (the built-in SS classifier is driven by CA-CB, so a pure CA offset partially masks itself). For rigorous pre-publication work, users should run an external tool such as **LACS** (Wang & Markley 2009) before FACET prediction.
+
 ### Perdeuterated samples
 
 For samples with deuterium labeling, set the `--deuteration` flag (or the Gradio dropdown) to `protonated` / `perdeut-exchanged` / `perdeut-unexchanged` / `ilv-methyl`. FACET applies an analytical 13C isotope correction (Venters et al. 1996; Hansen 1988) — roughly +0.29 ppm to CA, +0.68 ppm to CB, +0.10 ppm to C' for standard perdeut-exchanged samples — to recover protonated-equivalent shifts.

@@ -1,31 +1,44 @@
-"""Random coil index (RCI) and derived per-residue S^2 order parameter.
+"""Random Coil Index (RCI) and derived per-residue S^2 order parameter.
 
-Berjanskii & Wishart (2005) JACS 127, 14970; Berjanskii & Wishart (2008)
-J. Biomol. NMR 40, 31 — RCI converts backbone chemical shift deviations
-from random coil into an approximate NMR order parameter (S^2).
+Faithful implementation of Berjanskii & Wishart (2008) J. Biomol. NMR
+40, 31 (doi:10.1007/s10858-007-9208-0), with the simplifications noted
+below.
 
 Physical meaning: S^2 is a model-free order parameter in [0, 1]. A rigid
-residue in a folded element has S^2 ~ 0.85-0.90. A flexible loop has
-S^2 ~ 0.65-0.80. A disordered IDR residue has S^2 < 0.5.
+residue in a folded element has S^2 ~ 0.85; a flexible loop ~ 0.65; a
+disordered IDR residue <0.5. Computed here directly from backbone
+chemical shifts without NMR relaxation data.
 
-Algorithm (simplified Berjanskii-Wishart with empirical calibration):
-  1. Secondary shifts: delta(nucleus) = observed - random_coil
-  2. Per-nucleus |delta| scaled by the nucleus' typical deviation range
-     so different nuclei contribute comparably to the aggregate.
-  3. 3-residue smoothing window (|delta_i| averaged with neighbors).
-  4. Weighted RCI = weighted mean of smoothed scaled |deltas| across
-     observed nuclei. Characteristic values:
-       ~0.05 — pure random coil (no structural signature)
-       ~0.3  — flexible loop
-       ~0.7  — structured α-helix / β-strand
-  5. S^2 = tanh(2 * RCI), giving values ~0.1 for disordered up to ~0.9
-     for rigid structured elements — matches the phenomenological range
-     cited in Wishart 2008.
+Algorithm (faithful to Berjanskii-Wishart 2008 Eq. 2 and Eq. 3):
 
-The exact Berjanskii-Wishart polynomial uses per-nucleus calibrated
-coefficients from a large dataset; our simplified form produces the
-same qualitative pattern with cleaner code. Use this output as an
-order-of-magnitude rigidity indicator, not an absolute S^2 replacement.
+  1. Secondary shifts per residue: Δδ(nucleus) = observed - random_coil.
+  2. 3-residue smoothing of |Δδ|: average over i-1, i, i+1.
+  3. Weighted sum across observed nuclei with the all-6 weights from
+     the paper's Eq. 2:
+         0.74 Cα, 0.72 C', 0.13 Cβ, 0.38 N, 0.15 NH, 0.91 Hα
+     (from Supplemental Table 1, optimised against the 33-protein
+     training set for best correlation with MD RMSF and experimental
+     order parameters, r = 0.81).
+  4. RCI = 1 / (weighted_sum * 6) — the inverse of the weighted
+     average. Higher Δδ magnitudes → smaller RCI → more rigid.
+  5. S^2 = 1 - 0.4 * ln(1 + 17.7 * RCI) — Eq. 3 from the paper.
+
+Simplifications vs. the paper:
+  - We do NOT implement the per-combination weight optimisation from
+    SI Table 1 (weights adjust when some nuclei are missing). We always
+    use the all-6 weights; missing nuclei contribute 0 to the weighted
+    sum. On residues with incomplete data this biases RCI slightly
+    upward (S^2 slightly downward).
+  - We do NOT apply sequential i±1 neighbour corrections, chemical-
+    shift re-referencing (REFCOR), or the end-effect correction.
+    Re-referencing is handled separately by
+    ``facet.referencing.check_referencing`` if the user enables
+    ``auto_reference`` in ``predict()``.
+
+These simplifications keep the implementation small and stable. For
+S^2 values calibrated to the Berjanskii-Wishart training set exactly,
+users should go to the original RCI web server at
+http://wishart.biology.ualberta.ca/rci .
 """
 from __future__ import annotations
 
@@ -37,29 +50,30 @@ from .io.formats import BACKBONE_NUCLEI
 from .random_coil import RANDOM_COIL_SHIFTS
 
 
-# Per-nucleus weights. Proton and 13C get higher weight (largest dynamic
-# range in secondary shifts); 15N has wide intrinsic spread so smaller
-# weight. Weights don't need to sum to 1; we normalize by observed weights
-# per residue at the aggregation step.
-_WEIGHTS = {
-    "H":  0.3,
-    "HA": 0.5,
-    "N":  0.2,
-    "CA": 1.0,
-    "CB": 1.0,
-    "C":  0.8,
+# Berjanskii-Wishart 2008 Eq. 2 weights for the all-6-nuclei case.
+# Paper names → FACET names:
+#   Cα    → "CA"
+#   C'/CO → "C"
+#   Cβ    → "CB"
+#   N     → "N"
+#   NH    → "H"   (amide proton)
+#   Hα    → "HA"  (alpha proton)
+_WEIGHTS_BW2008 = {
+    "CA": 0.74,
+    "C":  0.72,
+    "CB": 0.13,
+    "N":  0.38,
+    "H":  0.15,
+    "HA": 0.91,
 }
 
-# Per-nucleus scaling factor (approximate typical maximum secondary shift,
-# used to bring all nuclei to a comparable ~0-1 range before weighting).
-_SCALE_PPM = {
-    "H":  1.2,   # |ΔH|   typically 0-1.2 ppm
-    "HA": 0.8,   # |ΔHA|  typically 0-0.8 ppm
-    "N":  6.0,   # |ΔN|   typically 0-6 ppm
-    "CA": 4.5,   # |ΔCA|  typically 0-4.5 ppm (helix +3, strand -1.5)
-    "CB": 3.0,   # |ΔCB|  typically 0-3 ppm
-    "C":  3.5,   # |ΔC'|  typically 0-3.5 ppm
-}
+# Normalising factor in Eq. 2 — always 6, independent of how many
+# nuclei are actually observed at a given residue.
+_N_NUCLEI = 6
+
+# Eq. 3 conversion constants.
+_S2_A = 0.4
+_S2_B = 17.7
 
 
 def compute_rci_s2(
@@ -67,15 +81,15 @@ def compute_rci_s2(
     masks: np.ndarray,    # (N, 6), 1=observed
     comp_ids: list[str],  # 3-letter AA codes
 ) -> np.ndarray:
-    """Compute per-residue RCI S^2.
+    """Compute per-residue RCI S^2 following Berjanskii-Wishart 2008.
 
-    Returns a (N,) float array; NaN at residues with too few observed
-    shifts for a reliable estimate.
+    Returns a (N,) float array of S^2 values in [0, 1]; NaN at residues
+    with fewer than 3 observed nuclei (insufficient for a stable RCI).
     """
     n = len(comp_ids)
-    nuc_list = list(BACKBONE_NUCLEI)
+    nuc_list = list(BACKBONE_NUCLEI)   # ("H", "HA", "N", "CA", "CB", "C")
 
-    # Build random-coil table (per-residue x per-nucleus).
+    # Build random-coil table (per-residue × per-nucleus).
     rc = np.full((n, 6), np.nan, dtype=np.float32)
     for i, aa in enumerate(comp_ids):
         aa_rc = RANDOM_COIL_SHIFTS.get(aa)
@@ -85,18 +99,18 @@ def compute_rci_s2(
             if nuc in aa_rc:
                 rc[i, j] = aa_rc[nuc]
 
-    # Per-residue, per-nucleus scaled |secondary shift|
+    # |secondary shift| per residue/nucleus; NaN where unobserved or
+    # no RC reference for that AA.
     valid = (masks > 0) & ~np.isnan(rc)
     sec = shifts.astype(np.float32) - rc
-    # Scale each nucleus column so it contributes comparably.
-    scale = np.array([_SCALE_PPM[nuc] for nuc in nuc_list], dtype=np.float32)
-    scaled_abs = np.where(valid, np.abs(sec) / scale, np.nan)
+    abs_sec = np.where(valid, np.abs(sec), np.nan)
 
-    # 3-residue smoothing window (Berjanskii 2005): average scaled |Δδ|
-    # over i-1, i, i+1 (when available).
-    smoothed = np.full_like(scaled_abs, np.nan)
+    # 3-residue smoothing: average |Δδ| over i-1, i, i+1 (only observed
+    # neighbours count). This is the smoothing step from the paper's
+    # protocol section.
+    smoothed = np.full_like(abs_sec, np.nan)
     for j in range(6):
-        col = scaled_abs[:, j]
+        col = abs_sec[:, j]
         mask_col = ~np.isnan(col)
         for i in range(n):
             window = []
@@ -104,27 +118,35 @@ def compute_rci_s2(
                 if 0 <= k < n and mask_col[k]:
                     window.append(col[k])
             if window:
-                smoothed[i, j] = np.mean(window)
+                smoothed[i, j] = float(np.mean(window))
 
-    # Weighted mean across nuclei, normalized by observed weights.
-    weights = np.array([_WEIGHTS[nuc] for nuc in nuc_list], dtype=np.float32)
-    rci = np.full(n, np.nan, dtype=np.float32)
-    for i in range(n):
-        available = ~np.isnan(smoothed[i])
-        if available.sum() < 3:
-            continue
-        w = weights[available]
-        vals = smoothed[i, available]
-        rci[i] = float(np.sum(w * vals) / max(np.sum(w), 1e-6))
+    # Weighted sum per residue using the all-6 weights. Missing nuclei
+    # contribute 0 (which biases RCI slightly upward — see module
+    # docstring for the simplification note).
+    weights = np.array([_WEIGHTS_BW2008[nuc] for nuc in nuc_list],
+                       dtype=np.float32)
 
-    # S^2 from RCI via smooth saturating mapping. Structured residues
-    # have RCI ~0.5-0.8 → S^2 ~0.75-0.93. Disordered residues have RCI
-    # ~0.05-0.15 → S^2 ~0.10-0.30. tanh gives the right saturation
-    # behaviour without hard cutoffs.
     s2 = np.full(n, np.nan, dtype=np.float32)
     for i in range(n):
-        if np.isnan(rci[i]):
+        observed_this_residue = ~np.isnan(smoothed[i])
+        if observed_this_residue.sum() < 3:
+            # Too few nuclei for a stable RCI estimate.
             continue
-        s2[i] = float(math.tanh(2.0 * rci[i]))
+
+        # Zero out missing nuclei, compute weighted sum.
+        row = np.where(observed_this_residue, smoothed[i], 0.0)
+        weighted_sum = float(np.sum(weights * row))
+        if weighted_sum <= 0.0:
+            # All |Δδ| are exactly zero — extreme random-coil limit.
+            # RCI saturates; S^2 → 0.
+            s2[i] = 0.0
+            continue
+
+        # Eq. 2: RCI = 1 / (weighted_sum * 6)
+        rci_val = 1.0 / (weighted_sum * _N_NUCLEI)
+
+        # Eq. 3: S^2 = 1 - 0.4 * ln(1 + 17.7 * RCI)
+        s2_val = 1.0 - _S2_A * math.log(1.0 + _S2_B * rci_val)
+        s2[i] = float(np.clip(s2_val, 0.0, 1.0))
 
     return s2

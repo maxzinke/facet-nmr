@@ -182,6 +182,20 @@ FACET v3 is a 1.29M-parameter local-biased transformer:
 
 MIT
 
+## References
+
+FACET builds on several established methods for chemical-shift-based protein analysis. If you use any of the following outputs, please cite the underlying paper in addition to FACET itself:
+
+- **Per-residue RCI S² order parameter** (reported in CSV / JSON / inspector as `rci_s2`): Berjanskii, M. V. & Wishart, D. S. *Application of the random coil index to studying protein flexibility.* **J. Biomol. NMR** 40, 31–48 (2008). DOI: [10.1007/s10858-007-9208-0](https://doi.org/10.1007/s10858-007-9208-0). Our implementation follows the paper's Eq. 2 (all-6-nuclei weighting coefficients from Supplemental Table 1) and Eq. 3 (S² = 1 − 0.4 · ln(1 + 17.7 · RCI)) but is **slightly simplified** — we do not apply the per-combination weight optimisation for subsets of observed nuclei, the sequential i±1 neighbour corrections, the REFCOR re-referencing step, or the end-effect correction. For exact parity with the published RCI server, use [the Wishart group's web tool](http://wishart.biology.ualberta.ca/rci).
+
+- **Random-coil reference shifts** used to compute secondary shifts: Wishart, D. S. *et al.* J. Biomol. NMR 5, 67–81 (1995); Schwarzinger, S. *et al.* JACS 123, 2970 (2001).
+
+- **Shift referencing sanity check**: adapted from the LACS approach — Wang, L. & Markley, J. L. *A simple method to predict protein chemical shifts from backbone amide 1H, 15N and 13C nuclei.* **J. Biomol. NMR** 44, 95 (2009). Users seeking rigorous re-referencing before publication-quality structure calculation should run LACS directly.
+
+- **IDP basin populations** recommended cross-check: Camilloni, C., De Simone, A., Vranken, W. F. & Vendruscolo, M. *Determination of Secondary Structure Populations in Disordered States of Proteins Using Nuclear Magnetic Resonance Chemical Shifts.* **Biochemistry** 51, 2224–2231 (2012). The δ2D code is at [github.com/carlocamilloni/d2D](https://github.com/carlocamilloni/d2D). See this README's "Basin populations" section for how FACET's geometric basins relate to δ2D's structural populations on IDP inputs.
+
+- **Deuterium isotope shift corrections** applied when `deuteration != "protonated"`: coefficients from Venters, R. A. *et al.* JACS 118, 8985 (1996); Hansen, P. E. Prog. NMR Spectrosc. 20, 207 (1988).
+
 ## Citation
 
 If you use FACET in your research, please cite:

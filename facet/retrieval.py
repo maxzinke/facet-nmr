@@ -123,6 +123,11 @@ class RetrievalResult:
     basin_populations: list[float] = field(default_factory=list)
     # 4-element list of basin population fractions: [alpha, beta, PPII, other].
     # Derived from cluster weights × cluster basin assignments.
+    top_neighbors: list[dict] = field(default_factory=list)
+    # Per-neighbor metadata for the top-k retrieved entries (sorted by
+    # cosine similarity desc). Each dict: {entry_id, aa, phi_deg, psi_deg,
+    # ss, basin, similarity}. Used for the per-residue inspector in the
+    # UI — "who did my shift pattern match?"
 
 
 # ─────────────────────────────────────────────────────────────
@@ -185,6 +190,22 @@ class FACETRetrieval:
         self.n_index = len(self.embeddings_normed)
         self.embed_dim = int(self.embeddings_normed.shape[1])
 
+        # Optional entries sidecar (list of BMRB origin strings, one per
+        # index row). Loaded lazily on first access via get_entries().
+        self._entries_path = Path(index_path).with_suffix(".entries.json")
+        self._entries: list[str] | None = None
+
+    def get_entries(self) -> list[str] | None:
+        """Return the list of entry ids, one per index row. None if the
+        sidecar is absent."""
+        if self._entries is not None:
+            return self._entries
+        if self._entries_path.exists():
+            import json
+            with open(self._entries_path) as f:
+                self._entries = json.load(f)
+        return self._entries
+
     @torch.no_grad()
     def _encode(self, shifts, masks, aa_idx, flags) -> np.ndarray:
         """Run the encoder center-residue output (pre-SS-conditioning)."""
@@ -235,6 +256,10 @@ class FACETRetrieval:
         h_normed = h / norms
 
         top_indices_batch = self._knn_batch(h_normed, k)
+        # Lazily load entries sidecar for neighbor introspection.
+        entries = self.get_entries()
+        # AA one-letter map (index order matches training vocabulary)
+        _AA_ONE = "ACDEFGHIKLMNPQRSTVWY"
 
         results: list[RetrievalResult] = []
         for b in range(len(h_normed)):
@@ -318,9 +343,32 @@ class FACETRetrieval:
             else:
                 tier = "None"
 
+            # Top-5 neighbors for the inspector — expose entry ids, AAs,
+            # phi/psi and similarity (cosine of normalized embedding).
+            top_neighbors = []
+            similarities = h_normed[b] @ self.embeddings_normed[top_idx].T  # (k,)
+            _SS_NAMES = {0: "H", 1: "E", 2: "C", 3: "?"}
+            _BASIN_NAMES = {0: "alpha_R", 1: "beta", 2: "PPII", 3: "other"}
+            n_show = min(5, len(top_idx))
+            for j in range(n_show):
+                idx = int(top_idx[j])
+                aa_int = int(self.aa_idx[idx])
+                aa1 = _AA_ONE[aa_int] if 0 <= aa_int < len(_AA_ONE) else "X"
+                entry_id = entries[idx] if entries and idx < len(entries) else ""
+                top_neighbors.append({
+                    "entry_id": entry_id,
+                    "aa": aa1,
+                    "phi_deg": float(math.degrees(float(self.phi[idx]))),
+                    "psi_deg": float(math.degrees(float(self.psi[idx]))),
+                    "ss": _SS_NAMES.get(int(self.ss[idx]), "?"),
+                    "basin": _BASIN_NAMES.get(int(self.basin[idx]), "?"),
+                    "similarity": float(similarities[j]),
+                })
+
             results.append(RetrievalResult(
                 clusters=clusters, tier=tier, n_neighbors=k,
                 basin_populations=basin_populations,
+                top_neighbors=top_neighbors,
             ))
 
         return results

@@ -294,10 +294,15 @@ def predict(
     # pipeline applies the same correction at build time). Perdeuterated
     # samples must be corrected here or predictions will be biased by up
     # to ~0.5 ppm on Cα — enough to swap helix/strand calls near the boundary.
+    deuteration_preset = "protonated"
+    deuteration_corrections_ppm: dict[str, float] = {}
     if deuteration is not None:
         from .deuteration import compute_isotope_correction, resolve_deuteration
         from .io.formats import AA_THREE_TO_ONE
         dv = resolve_deuteration(deuteration)
+        deuteration_preset = (
+            deuteration if isinstance(deuteration, str) else "custom"
+        )
         if dv.frac_amide > 0 or dv.frac_alpha > 0 or dv.frac_sidechain > 0:
             logger.info(
                 "Applying deuterium isotope correction: "
@@ -305,6 +310,9 @@ def predict(
                 dv.frac_amide, dv.frac_alpha, dv.frac_sidechain,
             )
             _nuc_cols = {"CA": 3, "CB": 4, "C": 5}
+            # Track the mean per-nucleus correction in ppm for reporting.
+            _nuc_sums = {nuc: 0.0 for nuc in _nuc_cols}
+            _nuc_counts = {nuc: 0 for nuc in _nuc_cols}
             for i, comp in enumerate(comp_ids):
                 aa1 = AA_THREE_TO_ONE.get(comp)
                 if aa1 is None:
@@ -313,6 +321,17 @@ def predict(
                 for nuc, col in _nuc_cols.items():
                     if masks[i, col] > 0 and abs(corr[nuc]) > 0.001:
                         shifts[i, col] += corr[nuc]
+                        _nuc_sums[nuc] += corr[nuc]
+                        _nuc_counts[nuc] += 1
+            for nuc, total in _nuc_sums.items():
+                if _nuc_counts[nuc] > 0:
+                    deuteration_corrections_ppm[nuc] = total / _nuc_counts[nuc]
+            logger.info(
+                "Deuteration correction per-nucleus mean (ppm): %s",
+                ", ".join(
+                    f"{n} {v:+.2f}" for n, v in deuteration_corrections_ppm.items()
+                ),
+            )
 
     # ── Minimum size ──
     if len(comp_ids) < _MIN_RESIDUES:
@@ -353,30 +372,46 @@ def predict(
         )
 
     # ── Validate AA composition ──
+    # Non-canonical residues (modified / xeno AAs) are silently skipped
+    # from prediction — they're removed from shift_list.residues below.
+    # Before v0.2.2 we raised ValueError at >50% non-canonical; that was
+    # too aggressive for real NMR-STAR files (some deposits use MSE for
+    # selenomet, PTR for phosphotyrosine, etc.). Now we skip them with
+    # a warning, predict on the standard residues, and let the user
+    # interpret the partial output.
     unknown_aas = [c for c in comp_ids if c not in CANONICAL_AA]
-    n_unknown = len(unknown_aas)
-    if n_unknown > 0:
+    skipped_noncanonical: list[tuple[int, str]] = []
+    if unknown_aas:
         unknown_set = sorted(set(unknown_aas))
-        frac = n_unknown / len(comp_ids)
-        msg = (
-            f"{n_unknown}/{len(comp_ids)} residues ({100*frac:.0f}%) use "
-            f"non-canonical amino acids not supported by FACET: "
-            f"{unknown_set[:10]}{'...' if len(unknown_set) > 10 else ''}. "
-            f"FACET is trained on the 20 standard proteinogenic AAs only."
+        frac = len(unknown_aas) / len(comp_ids)
+        logger.warning(
+            "%d/%d residues (%.0f%%) use non-canonical amino acids not "
+            "supported by FACET: %s%s. Skipping those residues; predicting "
+            "on the %d standard residues.",
+            len(unknown_aas), len(comp_ids), 100 * frac,
+            unknown_set[:10], "..." if len(unknown_set) > 10 else "",
+            len(comp_ids) - len(unknown_aas),
         )
-        if frac > 0.5:
+        # Filter shift_list in place to drop non-canonical residues, then
+        # rebuild the derived arrays so all downstream code sees only
+        # standard AAs.
+        kept_residues = [r for r in shift_list.residues if r.comp_id in CANONICAL_AA]
+        for r in shift_list.residues:
+            if r.comp_id not in CANONICAL_AA:
+                skipped_noncanonical.append((r.seq_id, r.comp_id))
+        shift_list = type(shift_list)(
+            residues=kept_residues,
+            sequence=shift_list.sequence,
+            seq_id_start=shift_list.seq_id_start,
+            source=shift_list.source,
+        )
+        shifts, masks, comp_ids, seq_ids = shift_list.to_arrays()
+        if len(comp_ids) < _MIN_RESIDUES:
             raise ValueError(
-                msg + "\n\nThis file appears to contain a synthetic peptide "
-                "with xeno or modified amino acids. FACET cannot predict "
-                "torsion angles for these residues — the model has not been "
-                "trained on their chemistry. Please use a standard-AA "
-                "protein or a method designed for xeno peptides."
-            )
-        else:
-            logger.warning(msg)
-            logger.warning(
-                "Non-canonical residues will be assigned Dynamic confidence "
-                "and should not be used for structure calculation."
+                f"After skipping {len(unknown_aas)} non-canonical residues, "
+                f"only {len(comp_ids)} standard residues remain — fewer than "
+                f"FACET's minimum of {_MIN_RESIDUES}. Use a sample with more "
+                f"standard AAs."
             )
 
     # ── Validate shift coverage ──
@@ -438,6 +473,12 @@ def predict(
     else:
         logger.info(ref_report.summary())
 
+    # Random-coil-index S^2 per residue (Berjanskii-Wishart). Cheap to
+    # compute from the already-corrected shifts; attached to each residue
+    # below. Returned as float in [0, 1], NaN when too few shifts.
+    from .rci import compute_rci_s2
+    rci_s2_arr = compute_rci_s2(shifts, masks, comp_ids)
+
     # Convert to secondary shifts
     sec_shifts = to_secondary_shifts(shifts, masks, comp_ids)
 
@@ -487,6 +528,7 @@ def predict(
     all_tier: list[str | None] = [None] * n
     all_basin_pops: list[tuple[float, float, float, float] | None] = [None] * n
     all_alt_clusters: list[list[tuple[float, float, float]] | None] = [None] * n
+    all_top_neighbors: list[list[dict] | None] = [None] * n
     # Per-residue 1-sigma error bounds (degrees). Populated from the
     # retrieval cluster's circular std when retrieval is used and a
     # tight cluster is found; otherwise falls back to a tier-based
@@ -589,6 +631,7 @@ def predict(
                     (float(bp[0]), float(bp[1]), float(bp[2]), float(bp[3]))
                     if bp else None
                 )
+                all_top_neighbors[idx] = list(r.top_neighbors) if r.top_neighbors else None
         else:
             # Parametric argmax path (v0.1 compatible)
             all_phi[start:end] = np.degrees(out["phi"].cpu().numpy())
@@ -622,6 +665,12 @@ def predict(
             psi_err=float(psi_err),
             basin_populations=all_basin_pops[i],
             alt_clusters=all_alt_clusters[i],
+            top_neighbors=all_top_neighbors[i],
+            rci_s2=(
+                float(rci_s2_arr[i])
+                if i < len(rci_s2_arr) and not np.isnan(rci_s2_arr[i])
+                else None
+            ),
             chi1_probs=(
                 (float(all_chi1_probs[i, 0]),
                  float(all_chi1_probs[i, 1]),
@@ -640,4 +689,6 @@ def predict(
         referencing_warnings=ref_report.warnings,
         referencing_summary=ref_report.summary(),
         referencing_corrections_applied=applied_corrections,
+        deuteration_preset=deuteration_preset,
+        deuteration_corrections_ppm=deuteration_corrections_ppm,
     )

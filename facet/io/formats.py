@@ -124,6 +124,16 @@ class ResiduePrediction:
     # For residues with multi-modal support: list of (phi_deg, psi_deg, weight)
     # for alternative clusters beyond the primary one. Empty list when
     # prediction is single-modal.
+    top_neighbors: list[dict] | None = None
+    # Top-5 retrieved reference residues for this residue's query. Each
+    # dict: {entry_id, aa, phi_deg, psi_deg, ss, basin, similarity}.
+    # Populated only when retrieval is used. Supports per-residue
+    # inspection ("who did my shift pattern match?").
+    rci_s2: float | None = None
+    # Random-coil-index-derived order parameter S^2 (Berjanskii-Wishart
+    # 2005/2008). Range [0, 1]; higher = more rigid. Typical values:
+    # folded alpha-helix ~0.85-0.90, flexible loop ~0.65-0.80, disordered
+    # IDR residue <0.5. None when not enough observed shifts to compute.
 
 
 @dataclass
@@ -148,6 +158,13 @@ class FACETResult:
     # Empty when auto-correction was disabled or no nucleus exceeded
     # tolerance.
     referencing_corrections_applied: dict[str, float] = field(default_factory=dict)
+    # Summary of the deuterium isotope correction applied to the input
+    # shifts (v0.2.2+). 'preset' is the user's chosen deuteration label
+    # (e.g. "protonated" / "perdeut_exchanged"). 'per_nucleus_ppm' holds
+    # the average ppm correction applied to each ¹³C nucleus — 0.0 on a
+    # protonated sample, non-zero for deuterated presets.
+    deuteration_preset: str = "protonated"
+    deuteration_corrections_ppm: dict[str, float] = field(default_factory=dict)
 
     @property
     def n_residues(self) -> int:

@@ -316,12 +316,24 @@ def write_csv(
     out.parent.mkdir(parents=True, exist_ok=True)
 
     CHI1_NAMES = {0: "g+", 1: "g-", 2: "t"}
-    lines = ["ResID,AA,PHI,PSI,dPHI,dPSI,SS,Chi1,Confidence,Class"]
+    lines = [
+        "ResID,AA,PHI,PSI,dPHI,dPSI,SS,Chi1,Chi1_prob,"
+        "Chi1_p_gplus,Chi1_p_gminus,Chi1_p_trans,"
+        "RCI_S2,Confidence,Class"
+    ]
     for r in result.residues:
         chi1_str = CHI1_NAMES.get(r.chi1, "") if r.chi1 is not None else ""
+        if r.chi1_probs is not None and r.chi1 is not None:
+            p_top = r.chi1_probs[r.chi1]
+            p_gp, p_gm, p_t = r.chi1_probs
+            probs_str = f"{p_top:.3f},{p_gp:.3f},{p_gm:.3f},{p_t:.3f}"
+        else:
+            probs_str = ",,,"
+        rci_str = f"{r.rci_s2:.3f}" if r.rci_s2 is not None else ""
         lines.append(
             f"{r.seq_id},{r.comp_id},{r.phi:.1f},{r.psi:.1f},"
             f"{r.phi_err:.1f},{r.psi_err:.1f},{r.ss},{chi1_str},"
+            f"{probs_str},{rci_str},"
             f"{r.confidence:.3f},{r.confidence_class}"
         )
 
@@ -339,24 +351,51 @@ def write_json(
     out = Path(path).resolve()
     out.parent.mkdir(parents=True, exist_ok=True)
 
+    def _residue_dict(r):
+        d = {
+            "seq_id": r.seq_id,
+            "comp_id": r.comp_id,
+            "phi": round(r.phi, 1),
+            "psi": round(r.psi, 1),
+            "phi_err": round(r.phi_err, 1),
+            "psi_err": round(r.psi_err, 1),
+            "ss": r.ss,
+            "chi1": r.chi1,
+            "confidence": round(r.confidence, 3),
+            "confidence_class": r.confidence_class,
+        }
+        if r.chi1_probs is not None:
+            d["chi1_probs"] = {
+                "g+": round(r.chi1_probs[0], 3),
+                "g-": round(r.chi1_probs[1], 3),
+                "t":  round(r.chi1_probs[2], 3),
+            }
+        if r.rci_s2 is not None:
+            d["rci_s2"] = round(r.rci_s2, 3)
+        if r.basin_populations is not None:
+            a, b, p, o = r.basin_populations
+            d["basin_populations"] = {
+                "alpha_R": round(a, 3),
+                "beta": round(b, 3),
+                "PPII": round(p, 3),
+                "other": round(o, 3),
+            }
+        if r.alt_clusters:
+            d["alt_clusters"] = [
+                {"phi": round(ph, 1), "psi": round(ps, 1), "weight": round(w, 3)}
+                for ph, ps, w in r.alt_clusters
+            ]
+        return d
+
     data = {
         "source": result.source,
         "n_residues": result.n_residues,
-        "residues": [
-            {
-                "seq_id": r.seq_id,
-                "comp_id": r.comp_id,
-                "phi": round(r.phi, 1),
-                "psi": round(r.psi, 1),
-                "phi_err": round(r.phi_err, 1),
-                "psi_err": round(r.psi_err, 1),
-                "ss": r.ss,
-                "chi1": r.chi1,
-                "confidence": round(r.confidence, 3),
-                "confidence_class": r.confidence_class,
-            }
-            for r in result.residues
-        ],
+        "index_version": result.index_version,
+        "deuteration_preset": result.deuteration_preset,
+        "deuteration_corrections_ppm": result.deuteration_corrections_ppm,
+        "referencing_summary": result.referencing_summary,
+        "referencing_corrections_applied": result.referencing_corrections_applied,
+        "residues": [_residue_dict(r) for r in result.residues],
     }
 
     out.write_text(json_mod.dumps(data, indent=2), encoding="utf-8")

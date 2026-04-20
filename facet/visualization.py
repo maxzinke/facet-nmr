@@ -601,25 +601,54 @@ def plot_residual_ss(
 
     # Sort by seq_id so gap handling and position math match plot_sequence_ss.
     residues = sorted(result.residues, key=lambda r: r.seq_id)
-    seq_id_base = residues[0].seq_id
-    total_positions = residues[-1].seq_id - seq_id_base + 1
 
-    # Build per-position basin arrays (NaN where we have no data).
+    # Resolve display sequence (mirror plot_sequence_ss logic) so unassigned
+    # slots can render the real AA letter in dim gray instead of a bare
+    # placeholder dot. Same length-and-mismatch sanity checks.
+    display_sequence = (result.sequence or "")
+    display_seq_id_start = result.seq_id_start if display_sequence else 1
+    if display_sequence:
+        min_required = residues[-1].seq_id - display_seq_id_start + 1
+        if len(display_sequence) < max(min_required, len(residues)):
+            display_sequence = ""
+    if display_sequence:
+        n_check = 0
+        n_mismatch = 0
+        for r in residues:
+            idx = r.seq_id - display_seq_id_start
+            if 0 <= idx < len(display_sequence):
+                n_check += 1
+                expected = AA_THREE_TO_ONE.get(r.comp_id, "X")
+                if display_sequence[idx] != expected and display_sequence[idx] != "X":
+                    n_mismatch += 1
+        if n_check > 0 and n_mismatch / n_check > 0.2:
+            display_sequence = ""
+
+    if display_sequence:
+        seq_id_base = display_seq_id_start
+        total_positions = len(display_sequence)
+    else:
+        seq_id_base = residues[0].seq_id
+        total_positions = residues[-1].seq_id - seq_id_base + 1
+
+    position_to_residue = {
+        r.seq_id - seq_id_base: r for r in residues
+        if 0 <= r.seq_id - seq_id_base < total_positions
+    }
+
+    # Build per-position basin arrays (NaN where residue is unassigned or
+    # lacks basin populations).
     alpha_arr = np.full(total_positions, np.nan)
     beta_arr = np.full(total_positions, np.nan)
     ppii_arr = np.full(total_positions, np.nan)
     other_arr = np.full(total_positions, np.nan)
-    seq_letters = ["·"] * total_positions
-    for r in residues:
-        pos = r.seq_id - seq_id_base
-        if 0 <= pos < total_positions:
-            seq_letters[pos] = AA_THREE_TO_ONE.get(r.comp_id, "X")
-            if r.basin_populations is not None:
-                a, b, p, o = r.basin_populations
-                alpha_arr[pos] = a
-                beta_arr[pos] = b
-                ppii_arr[pos] = p
-                other_arr[pos] = o
+    for pos, r in position_to_residue.items():
+        if r.basin_populations is not None:
+            a, b, p, o = r.basin_populations
+            alpha_arr[pos] = a
+            beta_arr[pos] = b
+            ppii_arr[pos] = p
+            other_arr[pos] = o
 
     n_rows = math.ceil(total_positions / residues_per_row)
     # Match plot_sequence_ss row-height budget so the two figures visually
@@ -684,14 +713,34 @@ def plot_residual_ss(
                 color=color,
             )
 
-        # Sequence letters — same font/size/color as plot_sequence_ss.
+        # Sequence letters — match plot_sequence_ss exactly:
+        #   assigned residue   → bold one-letter code in near-black
+        #   unassigned (gap)   → one-letter code in light gray if a
+        #                        reader-supplied sequence is available,
+        #                        else a dot placeholder. Also in light gray.
         for i, pos in enumerate(range(p0, p1)):
-            ax.text(
-                i, Y_SEQ_IDP, seq_letters[pos],
-                ha="center", va="center",
-                fontsize=10, fontfamily="monospace",
-                color=COLOR_SEQ,
-            )
+            r = position_to_residue.get(pos)
+            if r is None:
+                if display_sequence and 0 <= pos < len(display_sequence):
+                    letter = display_sequence[pos]
+                    if letter == "X":
+                        letter = "·"
+                else:
+                    letter = "·"
+                ax.text(
+                    i, Y_SEQ_IDP, letter,
+                    ha="center", va="center",
+                    fontsize=10, fontfamily="monospace",
+                    color=COLOR_UNASSIGNED,
+                )
+            else:
+                aa1 = AA_THREE_TO_ONE.get(r.comp_id, "X")
+                ax.text(
+                    i, Y_SEQ_IDP, aa1,
+                    ha="center", va="center",
+                    fontsize=10, fontfamily="monospace",
+                    color=COLOR_SEQ,
+                )
 
         # Residue numbers — same cadence + style as plot_sequence_ss
         # (every 10 + row termini).

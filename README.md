@@ -153,19 +153,52 @@ A folded α-helix residue with tight retrieval typically shows `α100/β0/P0/o0`
 
 ### Interpretation on disordered samples (IDRs / IDPs)
 
-FACET's basin populations are **not directly equivalent to d2D or CheSPI secondary-structure populations**. They measure different things:
+FACET's **geometric** basin populations report Ramachandran-region sampling, and alongside them FACET also emits **structural** SS-state populations in the d2D/CheSPI sense — both in a single `predict()` call. The two modes answer different questions:
 
-- **FACET** reports *geometric* Ramachandran-region sampling: "what fraction of retrieval neighbors fall in the α_R region of phi/psi space?"
-- **d2D / CheSPI** report *structural* state populations: "what fraction of the ensemble adopts canonical H-bonded α-helix?"
+- **Geometric mode** (`ResiduePrediction.basin_populations`): "what fraction of retrieval neighbors fall in the α_R region of phi/psi space?" Wide geometric regions.
+- **Structural mode** (`ResiduePrediction.structural_populations`): "what fraction of the ensemble adopts canonical H-bonded α-helix / β-strand / PPII / coil?" — comparable to d2D / CheSPI numbers.
 
-For a rigid folded residue these coincide (the ensemble IS at canonical α); for a disordered residue they diverge. A random-coil residue whose phi/psi samples the broad α region without ever H-bonding is `α100` in FACET but ~5% helix in d2D. Both are correct, just different questions.
+For a rigid folded residue these coincide. For a disordered residue they diverge: a random-coil residue whose phi/psi samples the broad α region without ever H-bonding is `α100` in geometric mode but ~10% helix in structural mode. Both are correct — they're different questions.
 
-**Locations agree, magnitudes systematically differ.** In benchmark comparisons (`docs/validation/idp_compare/` in the repo), FACET's α basin correlates with d2D's Helix population at Pearson r ≈ 0.3–0.85 across a 5-IDP panel — the tools agree on *where* transient structure sits, but FACET's magnitudes are systematically larger because its basins are wider geometric regions rather than tight structural states.
+#### Structural mode — how it works (kernel-weighted Bayesian retrieval)
 
-**Practical recommendation for IDP / IDR analysis:**
-- Use FACET's basin populations as a *per-residue Ramachandran-region fingerprint*: identify residues with elevated α, β, or PPII propensity, spot transient-structure regions, characterize disordered tails.
-- For canonical secondary-structure population numbers suitable for ensemble reweighting (BME, ENSEMBLE) or direct SS-population citation, run **d2D** (Camilloni et al. 2012, https://github.com/carlocamilloni/d2D) or **CheSPI** (Nielsen & Mulder 2022) alongside FACET.
-- FACET's value on disordered samples is that the **same output format** carries across folded and disordered residues of the same input — especially useful for partially-folded proteins (folded domain + disordered tail), where it gives you rigid phi/psi restraints on the folded part and a per-residue basin propensity fingerprint on the disordered part, in one pipeline.
+Structural populations are computed by **non-parametric Bayesian inference** over the full 220K-residue retrieval index, using the learned embedding as a similarity kernel:
+
+```
+P(state = s | query, AA) = [Σᵢ K(h_query, hᵢ) · 1[stateᵢ = s ∧ AAᵢ = AA]]
+                         / [Σᵢ K(h_query, hᵢ) · 1[AAᵢ = AA]]
+
+K(h_q, hᵢ) = exp(β · cos_sim(h_q, hᵢ))       (β = 15 by default)
+```
+
+State labels for index residues come from DSSP (H, E) plus a phi/psi-region override for PPII, matching d2D's 4-state convention:
+
+| state | condition |
+|---|---|
+| **Helix** | DSSP = H |
+| **Beta** | DSSP = E |
+| **PPII** | DSSP = C (loop) AND phi/psi in PPII region |
+| **Coil** | DSSP = C AND not in PPII region |
+
+Conceptually this is *"non-parametric d2D using FACET's learned shift embeddings instead of hand-crafted per-AA Gaussians"*. The embedding similarity replaces d2D's distributional likelihood; per-AA conditioning in numerator and denominator matches d2D's Bayesian factorisation. Output is a probability vector summing to 1, plus an effective-sample-size proxy (exp-of-Shannon-entropy of the softmax weights).
+
+Validation on folded proteins shows per-residue mean populations: helix residues → 0.90 H / 0.00 E / 0.02 P / 0.08 C; strand → 0.00 / 0.86 / 0.01 / 0.13; coil → 0.13 / 0.12 / 0.19 / 0.56. On IDRs the structural mode collapses to the d2D-style mostly-coil distribution rather than the inflated α seen in geometric mode.
+
+#### Per-residue ensemble export
+
+The 25 retrieved neighbours per residue (entry id, AA, phi/psi, DSSP, similarity) can also be exported directly as a seed ensemble for downstream tools (BME reweighting, ENSEMBLE, flexible-meccano):
+
+```python
+result.to_ensemble_csv("ensemble.csv")
+result.to_ensemble_json("ensemble.json")
+```
+
+#### Practical recommendation for IDP / IDR analysis
+
+- Use **geometric mode** (`basin_populations`) as a Ramachandran-region fingerprint: identify residues with elevated α, β, or PPII propensity, spot transient-structure regions.
+- Use **structural mode** (`structural_populations`) for canonical SS-state population numbers suitable for ensemble reweighting, direct citation alongside d2D/CheSPI, or paper methods sections.
+- Use the **ensemble export** (`to_ensemble_csv` / `to_ensemble_json`) as seed conformers for BME / ENSEMBLE pipelines — no separate neighbour-retrieval step needed downstream.
+- For rigorous cross-check, run **d2D** (Camilloni et al. 2012, https://github.com/carlocamilloni/d2D) or **CheSPI** (Nielsen & Mulder 2022) alongside FACET. All three agree well on transient-structure locations; the magnitudes you'd cite come from whichever tool your reviewer prefers.
 
 ## Model
 

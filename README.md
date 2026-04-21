@@ -277,7 +277,7 @@ result.to_ensemble_json("ensemble.json")
 
 #### Practical recommendation for IDP / IDR analysis
 
-- Use **geometric mode** (`basin_populations`) as a Ramachandran-region fingerprint: identify residues with elevated α, β, or PPII propensity, spot transient-structure regions. This is the honest per-residue φ/ψ-sampling claim, not a cooperative-SS number.
+- Use **dihedral sampling** (`basin_populations`) as a Ramachandran-region fingerprint: identify residues with elevated α, β, or PPII propensity, spot transient-structure regions. This is the honest per-residue φ/ψ-sampling claim, not a cooperative-structure number.
 - Use **FACET-D2** (`facet.predict_ss_populations`) for canonical (H / E / PPII / C) populations suitable for ensemble reweighting, direct citation alongside d2D / CheSPI, or paper methods sections. This is the retrieval-free engine and doesn't inherit folded-neighbor DSSP bias.
 - Treat **retrieval-based structural mode** (`structural_populations`) as a secondary readout: fine on folded / partially-folded samples, but over-estimates helix on pure IDPs (~20% on tau K18). Good for cross-checking FACET-D2 on structured regions.
 - Use the **ensemble export** (`to_ensemble_csv` / `to_ensemble_json`) as seed conformers for BME / ENSEMBLE pipelines — no separate neighbour-retrieval step needed downstream.

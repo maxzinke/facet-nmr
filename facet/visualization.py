@@ -791,9 +791,9 @@ def plot_residual_ss(
     if title is None:
         source = result.source or "FACET"
         mode_suffix = (
-            "Cooperative SS — retrieval-based"
+            "State populations (H / E / PPII / C)"
             if mode == "structural"
-            else "Basin sampling (φ/ψ fingerprint)"
+            else "Dihedral sampling (α / β / PPII)"
         )
         title = (
             f"{mode_suffix} — "

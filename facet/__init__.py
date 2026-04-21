@@ -20,6 +20,10 @@ __version__ = "0.2.0"
 
 from .inference import predict
 from .io.formats import FACETResult, ResiduePrediction, ShiftList
+from .ss_populations import (
+    SSPopulationResult,
+    predict_ss_populations,
+)
 
 
 def plot_sequence_ss(*args, **kwargs):
@@ -41,8 +45,10 @@ def plot_residual_ss(*args, **kwargs):
 __all__ = [
     "__version__",
     "predict",
+    "predict_ss_populations",
     "FACETResult",
     "ResiduePrediction",
+    "SSPopulationResult",
     "ShiftList",
     "plot_sequence_ss",
     "plot_residual_ss",

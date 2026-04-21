@@ -246,6 +246,7 @@ def predict(
     use_retrieval: bool | None = None,
     retrieval_k: int = 25,
     auto_reference: bool = False,
+    structural_beta: float = 15.0,
 ) -> FACETResult:
     """Predict backbone torsion angles from chemical shifts.
 
@@ -589,6 +590,7 @@ def predict(
             batch_aa_center = b_aa[:, b_aa.shape[1] // 2].cpu().numpy()
             struct_pops, struct_effn = compute_structural_populations(
                 retriever, batch_embeds, batch_aa_center,
+                beta=structural_beta,
             )
             # Expected basin by encoder SS (basin index: 0=alpha_R, 1=beta,
             # 2=PPII, 3=other). We use this to catch cases where retrieval

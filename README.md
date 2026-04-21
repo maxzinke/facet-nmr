@@ -71,6 +71,14 @@ result.to_predtab("pred.tab")       # per-residue summary table
 
 # Print summary
 print(result.summary())
+
+# Retrieval-free d2D-style SS populations (for IDPs, or as cross-check)
+from facet import predict_ss_populations
+from facet.io import read_auto
+sl = read_auto("shifts.tab")             # auto-detects .tab / .csv / .nef / NMR-STAR
+ss = predict_ss_populations(sl)
+# ss.populations[i] is (helix, beta, ppii, coil) for residue i
+# ss.mean_populations gives the sequence-average 4-vector
 ```
 
 ## Input Formats
@@ -153,16 +161,19 @@ A folded α-helix residue with tight retrieval typically shows `α100/β0/P0/o0`
 
 ### Interpretation on disordered samples (IDRs / IDPs)
 
-FACET's **geometric** basin populations report Ramachandran-region sampling, and alongside them FACET also emits **structural** SS-state populations in the d2D/CheSPI sense — both in a single `predict()` call. The two modes answer different questions:
+FACET provides **three** complementary SS-population readouts, each answering a slightly different question:
 
-- **Geometric mode** (`ResiduePrediction.basin_populations`): "what fraction of retrieval neighbors fall in the α_R region of phi/psi space?" Wide geometric regions.
-- **Structural mode** (`ResiduePrediction.structural_populations`): "what fraction of the ensemble adopts canonical H-bonded α-helix / β-strand / PPII / coil?" — comparable to d2D / CheSPI numbers.
+| readout | API | what it measures | best for |
+|---|---|---|---|
+| **Geometric** | `ResiduePrediction.basin_populations` | fraction of retrieval neighbors in each Ramachandran basin (α_R / β / PPII / other) | spotting transient-structure regions, quick IDR fingerprints |
+| **Structural (retrieval)** | `ResiduePrediction.structural_populations` | kernel-weighted Bayesian posterior over DSSP states using the embedding as similarity kernel | folded proteins, ensemble-reweighting priors |
+| **SS populations (d2D-style)** | `facet.predict_ss_populations(...)` | d2D-style per-AA multivariate Gaussian likelihood on raw 6 backbone shifts — **no retrieval** | IDPs, cross-check against d2D / CheSPI, retrieval-free baseline |
 
-For a rigid folded residue these coincide. For a disordered residue they diverge: a random-coil residue whose phi/psi samples the broad α region without ever H-bonding is `α100` in geometric mode but ~10% helix in structural mode. Both are correct — they're different questions.
+For a rigid folded residue all three coincide. For a disordered residue they diverge: a random-coil residue whose phi/psi samples the broad α region without ever H-bonding is `α100` geometric, ~15% helix structural-retrieval, ~5% helix SS-populations. Report whichever answers the question you're asking.
 
-#### Structural mode — how it works (kernel-weighted Bayesian retrieval)
+#### Structural (retrieval) mode — kernel-weighted Bayesian retrieval
 
-Structural populations are computed by **non-parametric Bayesian inference** over the full 220K-residue retrieval index, using the learned embedding as a similarity kernel:
+Structural populations in the main `predict()` output come from **non-parametric Bayesian inference** over the full 220K-residue retrieval index, using the learned embedding as a similarity kernel:
 
 ```
 P(state = s | query, AA) = [Σᵢ K(h_query, hᵢ) · 1[stateᵢ = s ∧ AAᵢ = AA]]
@@ -180,9 +191,63 @@ State labels for index residues come from DSSP (H, E) plus a phi/psi-region over
 | **PPII** | DSSP = C (loop) AND phi/psi in PPII region |
 | **Coil** | DSSP = C AND not in PPII region |
 
-Conceptually this is *"non-parametric d2D using FACET's learned shift embeddings instead of hand-crafted per-AA Gaussians"*. The embedding similarity replaces d2D's distributional likelihood; per-AA conditioning in numerator and denominator matches d2D's Bayesian factorisation. Output is a probability vector summing to 1, plus an effective-sample-size proxy (exp-of-Shannon-entropy of the softmax weights).
+Conceptually this is *"non-parametric d2D using FACET's learned shift embeddings instead of hand-crafted per-AA Gaussians"*. Validation on folded proteins shows per-residue mean populations: helix residues → 0.90 H / 0.00 E / 0.02 P / 0.08 C; strand → 0.00 / 0.86 / 0.01 / 0.13. **On pure IDPs this mode over-estimates helix** (~20% on tau K18) because neighbor DSSP labels carry their crystal-structure context — which is why we also ship the d2D-style Gaussian engine below.
 
-Validation on folded proteins shows per-residue mean populations: helix residues → 0.90 H / 0.00 E / 0.02 P / 0.08 C; strand → 0.00 / 0.86 / 0.01 / 0.13; coil → 0.13 / 0.12 / 0.19 / 0.56. On IDRs the structural mode collapses to the d2D-style mostly-coil distribution rather than the inflated α seen in geometric mode.
+#### SS populations — d2D-style Gaussian engine, refit on our data
+
+For IDPs and cross-tool cross-checks, use the retrieval-free d2D-style engine:
+
+```python
+from facet import predict_ss_populations, ShiftList
+
+sl = ShiftList.from_bmrb_file("bmr19253.str")  # or from_tab, from_csv...
+res = predict_ss_populations(sl, smooth=True, min_nuclei=3)
+
+for sid, pops in zip(res.seq_ids, res.populations):
+    h, e, p, c = pops
+    print(f"{sid}: H={h:.2f} E={e:.2f} P={p:.2f} C={c:.2f}")
+```
+
+Per-residue inference:
+
+```
+v_s = observed_shifts - (μ[aa, s] + Σ_neighbor context[offset, aa_nbr, s])
+L_s = N(0 | v_s, Σ)  =  (2π)^(-n/2) · |Σ|^(-1/2) · exp(-½ · v_s^T Σ^(-1) v_s)
+P[s | shifts, aa, neighbors] = L_s / Σ_s' L_s'
+```
+
+Engine = Camilloni et al. 2012 (d2D). **Parameters = our own refit on 49,262 carefully curated BMRB residues** — no reliance on d2D's 2012 tables:
+- LACS-corrected entries excluded (LACS compresses state-mean separation, biasing absolute per-state means)
+- Helix state restricted to canonical α-helix phi/psi window (core residues only, ≥ 8-residue segments, 2-residue edge trim)
+- Strand state restricted to canonical β phi/psi window, edge-trimmed
+- PPII state from Ramachandran basin (d2D used fragment matching)
+- Coil state from DSSP=C segments ≥ 4 residues long
+- Neighbor-context corrections fit per (state, nucleus, offset, neighbor-AA)
+
+### Honest comparison vs d2D and CheSPI
+
+We compared FACET's d2D-style engine (FACET-D2) to [d2D (Camilloni 2012)](https://github.com/carlocamilloni/d2D) and [CheSPI (Nielsen & Mulder 2021)](https://github.com/protein-nmr/CheSPI) on a canonical IDP panel (tau K18, α-synuclein) plus folded controls (ubiquitin, GB1). Mean helix populations on tau K18 (BMRB 19253):
+
+| method | mean helix | max helix | localisation (vs FACET-D2 r) |
+|---|---|---|---|
+| FACET retrieval mode | 0.206 | 1.000 | baseline |
+| **FACET-D2 (this package)** | **0.066** | 0.237 | — |
+| d2D | 0.010 | 0.061 | r = +0.46 |
+| CheSPI 4-state (H+G+I) | 0.044 | 0.127 | r = +0.23 |
+| CheSPI probs3 | 0.000 | 0.011 | r ≈ 0 |
+
+**Where FACET-D2 is better**:
+- No 2012 table dependency — parameters refit on 49K modern, LACS-free, state-curated residues
+- Removes the retrieval-mode helix blowup (20.6% → 6.6% on tau K18)
+- Ships with FACET so you get φ/ψ + SS populations in one pass; d2D and CheSPI are separate tools
+
+**Where FACET-D2 is worse, honestly**:
+- Our σ is ~40% wider than d2D's (ALA CA pooled: 1.29 vs 0.90 ppm). Intrinsic to our state-label granularity — d2D's 2012 library was hand-curated with protocols we can't fully replicate. Consequence: FACET-D2 does not reproduce d2D's crisp "≈ 0% helix" on pure IDPs
+- FACET-D2 lands closer to **CheSPI 4-state** (DSSP H+G+I combined) than to d2D's strict α-only H state. This means FACET-D2's helix score includes low-level transient helical sampling (3₁₀ / π / edge) that d2D filters away
+- No sequence-based SS prior (CheSPI uses a RaptorX-style NN); no HMM Viterbi cooperativity smoothing (CheSPI adds this). FACET-D2 uses only a 5-residue triangular smoothing
+- On folded proteins FACET-D2 over-calls PPII vs d2D (tau K18: 0.37 vs 0.17; ubiquitin: 0.33 vs 0.05) — PPII basin boundaries in our training (broad phi/psi window) are more inclusive than d2D's fragment-matching approach
+
+**Recommended cross-check**: For IDP manuscript figures or structure calculation, run d2D or CheSPI alongside FACET-D2. When all three agree on transient-structure locations (which they do within their r values), cite the magnitudes you'd report from whichever tool your reviewer prefers. FACET-D2 adds value as a retrieval-free, retrievable-inside-FACET, modern-data baseline.
 
 #### Per-residue ensemble export
 
@@ -225,7 +290,9 @@ FACET builds on several established methods for chemical-shift-based protein ana
 
 - **Shift referencing sanity check**: adapted from the LACS approach — Wang, L. & Markley, J. L. *A simple method to predict protein chemical shifts from backbone amide 1H, 15N and 13C nuclei.* **J. Biomol. NMR** 44, 95 (2009). Users seeking rigorous re-referencing before publication-quality structure calculation should run LACS directly.
 
-- **IDP basin populations** recommended cross-check: Camilloni, C., De Simone, A., Vranken, W. F. & Vendruscolo, M. *Determination of Secondary Structure Populations in Disordered States of Proteins Using Nuclear Magnetic Resonance Chemical Shifts.* **Biochemistry** 51, 2224–2231 (2012). The δ2D code is at [github.com/carlocamilloni/d2D](https://github.com/carlocamilloni/d2D). See this README's "Basin populations" section for how FACET's geometric basins relate to δ2D's structural populations on IDP inputs.
+- **d2D engine** (the inference algorithm used by `facet.predict_ss_populations`): Camilloni, C., De Simone, A., Vranken, W. F. & Vendruscolo, M. *Determination of Secondary Structure Populations in Disordered States of Proteins Using Nuclear Magnetic Resonance Chemical Shifts.* **Biochemistry** 51, 2224–2231 (2012). Source at [github.com/carlocamilloni/d2D](https://github.com/carlocamilloni/d2D). FACET uses the same per-AA multivariate Gaussian likelihood as d2D, but with **all parameters refit** on our own 49 K-residue modern LACS-free curated training set — no reliance on Camilloni 2012's published parameter tables. See the "Honest comparison vs d2D and CheSPI" section above for validation on IDPs + folded proteins and where FACET-D2 lands relative to d2D / CheSPI.
+
+- **CheSPI** (recommended IDP cross-check): Nielsen, J. T. & Mulder, F. A. A. *CheSPI: chemical shift secondary structure population inference.* **J. Biomol. NMR** 75, 273–291 (2021). DOI: [10.1007/s10858-021-00374-w](https://doi.org/10.1007/s10858-021-00374-w). Source at [github.com/protein-nmr/CheSPI](https://github.com/protein-nmr/CheSPI). CheSPI projects secondary shifts to two principal components, applies a per-state 2D Gaussian likelihood, combines with a RaptorX-style sequence-based prior, and post-processes with a Viterbi-like HMM over DSSP 8-state. FACET-D2's helix magnitudes on IDPs match CheSPI's 4-state "helical" (H+G+I) definition more closely than d2D's strict α-only H.
 
 - **Deuterium isotope shift corrections** applied when `deuteration != "protonated"`: coefficients from Venters, R. A. *et al.* JACS 118, 8985 (1996); Hansen, P. E. Prog. NMR Spectrosc. 20, 207 (1988).
 

@@ -529,6 +529,11 @@ def predict(
     all_basin_pops: list[tuple[float, float, float, float] | None] = [None] * n
     all_alt_clusters: list[list[tuple[float, float, float]] | None] = [None] * n
     all_top_neighbors: list[list[dict] | None] = [None] * n
+    # Structural populations (v0.4+, phase 3.5): filled only when
+    # retrieval is enabled. Kernel-weighted Bayesian SS-state populations
+    # in d2D convention (helix, beta, ppii, coil). See facet/structural.py.
+    all_structural_pops: list[tuple[float, float, float, float] | None] = [None] * n
+    all_structural_effn: list[float | None] = [None] * n
     # Per-residue 1-sigma error bounds (degrees). Populated from the
     # retrieval cluster's circular std when retrieval is used and a
     # tight cluster is found; otherwise falls back to a tier-based
@@ -570,6 +575,21 @@ def predict(
             # Replace (phi, psi) with retrieval's top-cluster answer;
             # attach tier + basin populations + alternative clusters.
             r_results = retriever.predict(b_shifts, b_masks, b_aa, b_flags, k=retrieval_k)
+            # Also compute d2D-style structural populations via
+            # kernel-weighted Bayesian softmax over the full index.
+            # We re-encode here (cheap; the encoder is already warm).
+            from .structural import compute_structural_populations
+            batch_embeds = retriever._encode(
+                b_shifts.to(retriever.device),
+                b_masks.to(retriever.device),
+                b_aa.to(retriever.device),
+                b_flags.to(retriever.device),
+            )
+            # Extract the center-residue AA index per batch element.
+            batch_aa_center = b_aa[:, b_aa.shape[1] // 2].cpu().numpy()
+            struct_pops, struct_effn = compute_structural_populations(
+                retriever, batch_embeds, batch_aa_center,
+            )
             # Expected basin by encoder SS (basin index: 0=alpha_R, 1=beta,
             # 2=PPII, 3=other). We use this to catch cases where retrieval
             # lands in the wrong Ramachandran region for a residue whose SS
@@ -632,6 +652,12 @@ def predict(
                     if bp else None
                 )
                 all_top_neighbors[idx] = list(r.top_neighbors) if r.top_neighbors else None
+                # Structural populations from the kernel-weighted softmax.
+                sp = struct_pops[i]
+                all_structural_pops[idx] = (
+                    float(sp[0]), float(sp[1]), float(sp[2]), float(sp[3])
+                )
+                all_structural_effn[idx] = float(struct_effn[i])
         else:
             # Parametric argmax path (v0.1 compatible)
             all_phi[start:end] = np.degrees(out["phi"].cpu().numpy())
@@ -671,6 +697,8 @@ def predict(
                 if i < len(rci_s2_arr) and not np.isnan(rci_s2_arr[i])
                 else None
             ),
+            structural_populations=all_structural_pops[i],
+            structural_populations_eff_n=all_structural_effn[i],
             chi1_probs=(
                 (float(all_chi1_probs[i, 0]),
                  float(all_chi1_probs[i, 1]),

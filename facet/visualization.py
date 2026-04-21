@@ -548,12 +548,20 @@ BASIN_COLORS = {
     "ppii":  "#16A085",   # teal-green — PPII (extended disordered)
     "other": "#7F8C8D",   # gray — everything else
 }
-BASIN_LABELS = {
+BASIN_LABELS_GEOM = {
     "alpha": "α_R",
     "beta":  "β",
     "ppii":  "PPII",
     "other": "other",
 }
+BASIN_LABELS_STRUCT = {
+    "alpha": "Helix",
+    "beta":  "Beta",
+    "ppii":  "PPII",
+    "other": "Coil",
+}
+# Backwards-compat alias pointing at the geometric labels.
+BASIN_LABELS = BASIN_LABELS_GEOM
 
 
 def plot_residual_ss(
@@ -561,8 +569,23 @@ def plot_residual_ss(
     path: str | Path | None = None,
     residues_per_row: int = 60,
     title: str | None = None,
+    mode: str = "geometric",
 ):
     """Per-residue basin-population figure for flexible / disordered samples.
+
+    Two modes are supported:
+
+    - **mode="geometric"** (default): uses the ``basin_populations``
+      vector from retrieval — fraction of retrieved neighbours whose
+      phi/psi fall in each Ramachandran region. Answers "which region
+      of the plot is the ensemble in". Tracks labelled α_R / β / PPII /
+      other.
+    - **mode="structural"**: uses ``structural_populations`` —
+      kernel-weighted Bayesian estimate of canonical SS-state
+      populations (helix / beta / PPII / coil), comparable to
+      d2D. Tracks labelled Helix / Beta / PPII / Coil. More directly
+      comparable to published IDP state populations; magnitudes agree
+      with d2D to within ~0.10 per state.
 
     Visual twin of ``plot_sequence_ss`` — same figure width, row wrap,
     fonts, and palette so the two figures can be shown side-by-side
@@ -636,15 +659,25 @@ def plot_residual_ss(
         if 0 <= r.seq_id - seq_id_base < total_positions
     }
 
-    # Build per-position basin arrays (NaN where residue is unassigned or
-    # lacks basin populations).
+    # Build per-position population arrays (NaN where residue is unassigned
+    # or lacks the requested populations). Mode selects which per-residue
+    # field to read from.
+    if mode not in ("geometric", "structural"):
+        raise ValueError(
+            f"plot_residual_ss: mode must be 'geometric' or 'structural', got {mode!r}"
+        )
     alpha_arr = np.full(total_positions, np.nan)
     beta_arr = np.full(total_positions, np.nan)
     ppii_arr = np.full(total_positions, np.nan)
     other_arr = np.full(total_positions, np.nan)
     for pos, r in position_to_residue.items():
-        if r.basin_populations is not None:
-            a, b, p, o = r.basin_populations
+        source = (
+            r.structural_populations
+            if mode == "structural"
+            else r.basin_populations
+        )
+        if source is not None:
+            a, b, p, o = source
             alpha_arr[pos] = a
             beta_arr[pos] = b
             ppii_arr[pos] = p
@@ -665,6 +698,9 @@ def plot_residual_ss(
     # Track layout inside each row: four tracks stacked vertically with
     # a small gap, each track 1.0 unit tall. Y_SEQ/Y_NUM mirror the
     # sequence-plot offsets so the two figures line up visually.
+    _labels_for_mode = (
+        BASIN_LABELS_STRUCT if mode == "structural" else BASIN_LABELS_GEOM
+    )
     track_order = ["other", "ppii", "beta", "alpha"]
     TRACK_HEIGHT = 1.0
     TRACK_GAP = 0.15
@@ -707,7 +743,7 @@ def plot_residual_ss(
             )
             # Track label — match sequence-plot label font size (9, bold)
             ax.text(
-                -1.5, base + TRACK_HEIGHT / 2, BASIN_LABELS[name],
+                -1.5, base + TRACK_HEIGHT / 2, _labels_for_mode[name],
                 ha="right", va="center",
                 fontsize=9, fontweight="bold",
                 color=color,
@@ -762,8 +798,11 @@ def plot_residual_ss(
 
     if title is None:
         source = result.source or "FACET"
+        mode_suffix = (
+            "structural (d2D-style)" if mode == "structural" else "geometric basins"
+        )
         title = (
-            f"Residual SS populations — "
+            f"Residual SS populations ({mode_suffix}) — "
             f"{Path(source).stem if source else 'prediction'}"
         )
     # Match plot_sequence_ss title styling.
@@ -773,10 +812,10 @@ def plot_residual_ss(
     # sequence-plot legend.
     from matplotlib.patches import Patch
     handles = [
-        Patch(facecolor=BASIN_COLORS["alpha"], label="α_R"),
-        Patch(facecolor=BASIN_COLORS["beta"],  label="β"),
-        Patch(facecolor=BASIN_COLORS["ppii"],  label="PPII"),
-        Patch(facecolor=BASIN_COLORS["other"], label="other"),
+        Patch(facecolor=BASIN_COLORS["alpha"], label=_labels_for_mode["alpha"]),
+        Patch(facecolor=BASIN_COLORS["beta"],  label=_labels_for_mode["beta"]),
+        Patch(facecolor=BASIN_COLORS["ppii"],  label=_labels_for_mode["ppii"]),
+        Patch(facecolor=BASIN_COLORS["other"], label=_labels_for_mode["other"]),
     ]
     fig.legend(
         handles=handles,

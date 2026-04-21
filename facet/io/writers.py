@@ -319,7 +319,9 @@ def write_csv(
     lines = [
         "ResID,AA,PHI,PSI,dPHI,dPSI,SS,Chi1,Chi1_prob,"
         "Chi1_p_gplus,Chi1_p_gminus,Chi1_p_trans,"
-        "RCI_S2,Confidence,Class"
+        "RCI_S2,"
+        "struct_helix,struct_beta,struct_ppii,struct_coil,struct_effN,"
+        "Confidence,Class"
     ]
     for r in result.residues:
         chi1_str = CHI1_NAMES.get(r.chi1, "") if r.chi1 is not None else ""
@@ -330,10 +332,17 @@ def write_csv(
         else:
             probs_str = ",,,"
         rci_str = f"{r.rci_s2:.3f}" if r.rci_s2 is not None else ""
+        if r.structural_populations is not None:
+            h, b, p, c = r.structural_populations
+            struct_str = f"{h:.3f},{b:.3f},{p:.3f},{c:.3f}"
+            effn = r.structural_populations_eff_n or 0.0
+            struct_str += f",{effn:.1f}"
+        else:
+            struct_str = ",,,,"
         lines.append(
             f"{r.seq_id},{r.comp_id},{r.phi:.1f},{r.psi:.1f},"
             f"{r.phi_err:.1f},{r.psi_err:.1f},{r.ss},{chi1_str},"
-            f"{probs_str},{rci_str},"
+            f"{probs_str},{rci_str},{struct_str},"
             f"{r.confidence:.3f},{r.confidence_class}"
         )
 
@@ -372,6 +381,16 @@ def write_json(
             }
         if r.rci_s2 is not None:
             d["rci_s2"] = round(r.rci_s2, 3)
+        if r.structural_populations is not None:
+            h, b, p, c = r.structural_populations
+            d["structural_populations"] = {
+                "helix": round(h, 3),
+                "beta":  round(b, 3),
+                "ppii":  round(p, 3),
+                "coil":  round(c, 3),
+            }
+            if r.structural_populations_eff_n is not None:
+                d["structural_eff_N"] = round(r.structural_populations_eff_n, 1)
         if r.basin_populations is not None:
             a, b, p, o = r.basin_populations
             d["basin_populations"] = {

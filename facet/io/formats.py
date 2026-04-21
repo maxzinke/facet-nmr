@@ -134,6 +134,16 @@ class ResiduePrediction:
     # 2005/2008). Range [0, 1]; higher = more rigid. Typical values:
     # folded alpha-helix ~0.85-0.90, flexible loop ~0.65-0.80, disordered
     # IDR residue <0.5. None when not enough observed shifts to compute.
+    structural_populations: tuple[float, float, float, float] | None = None
+    # d2D-style SS-state populations (helix, beta, PPII, coil). Computed
+    # by kernel-weighted Bayesian inference over the full retrieval
+    # index (facet/structural.py). Complements basin_populations
+    # (geometric Ramachandran regions); these are the field-standard
+    # structural populations comparable to d2D / CheSPI.
+    structural_populations_eff_n: float | None = None
+    # Effective sample size (exp of Shannon entropy) of the softmax
+    # weights. Higher = more neighbors contributing → tighter estimate.
+    # Useful as a precision proxy.
 
 
 @dataclass
@@ -230,6 +240,16 @@ class FACETResult:
         """Write JSON."""
         from .writers import write_json
         write_json(self, path, **kw)
+
+    def to_ensemble_csv(self, path: str, **kw) -> None:
+        """Write per-residue retrieval-neighbour ensemble as CSV (Phase 3.5)."""
+        from ..ensemble import emit_ensemble_csv
+        emit_ensemble_csv(self, path, **kw)
+
+    def to_ensemble_json(self, path: str, **kw) -> None:
+        """Write per-residue retrieval-neighbour ensemble as JSON (Phase 3.5)."""
+        from ..ensemble import emit_ensemble_json
+        emit_ensemble_json(self, path, **kw)
 
     def summary(self) -> str:
         """Format a per-residue prediction summary as a plain-text table."""

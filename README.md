@@ -2,7 +2,7 @@
 
 **FACET** (Fold And Conformation Estimation Tool) predicts backbone phi/psi torsion angles, secondary structure, chi1 rotamers, and per-residue Ramachandran basin populations from NMR backbone chemical shifts (H, HA, N, CA, CB, C).
 
-**v0.2.0 — retrieval-augmented.** Inference is backed by a kNN + DBSCAN lookup over a bundled 220K-residue reference index, producing multi-modal predictions with per-residue FACET tiers (High / Medium / Low / Flexible) plus alpha / beta / PPII / other basin populations. Clean 745-protein test benchmark (53,841 paired residues):
+**v0.3.0 — retrieval-augmented + retrieval-free SS populations.** Phi/psi inference is backed by a kNN + DBSCAN lookup over a bundled 220K-residue reference index, producing multi-modal predictions with per-residue FACET tiers (High / Medium / Low / Flexible) plus α / β / PPII / other basin populations. Alongside, a retrieval-free d2D-style per-AA Gaussian engine (`facet.predict_ss_populations`) reports canonical (H / E / PPII / C) populations fit on 49K LACS-free curated residues — use this on IDPs where retrieval-derived populations inherit folded-neighbor DSSP bias. Clean 745-protein φ/ψ test benchmark (53,841 paired residues):
 
 | Metric | Reference baseline | **FACET v0.2** |
 |---|---|---|
@@ -74,8 +74,11 @@ print(result.summary())
 
 # Retrieval-free d2D-style SS populations (for IDPs, or as cross-check)
 from facet import predict_ss_populations
-from facet.io import read_auto
+from facet.io.readers import read_auto
+from facet.io.bmrb import fetch_bmrb
 sl = read_auto("shifts.tab")             # auto-detects .tab / .csv / .nef / NMR-STAR
+# …or fetch from BMRB directly:
+# sl = fetch_bmrb("19253")
 ss = predict_ss_populations(sl)
 # ss.populations[i] is (helix, beta, ppii, coil) for residue i
 # ss.mean_populations gives the sequence-average 4-vector
@@ -169,7 +172,17 @@ FACET provides **three** complementary SS-population readouts, each answering a 
 | **Structural (retrieval)** | `ResiduePrediction.structural_populations` | kernel-weighted Bayesian posterior over DSSP states using the embedding as similarity kernel | folded proteins, ensemble-reweighting priors |
 | **SS populations (d2D-style)** | `facet.predict_ss_populations(...)` | d2D-style per-AA multivariate Gaussian likelihood on raw 6 backbone shifts — **no retrieval** | IDPs, cross-check against d2D / CheSPI, retrieval-free baseline |
 
-For a rigid folded residue all three coincide. For a disordered residue they diverge: a random-coil residue whose phi/psi samples the broad α region without ever H-bonding is `α100` geometric, ~15% helix structural-retrieval, ~5% helix SS-populations. Report whichever answers the question you're asking.
+For a rigid folded residue all three coincide. For a disordered residue they diverge — measured on tau K18 (BMRB 19253, 123 residues aligned across all three readouts):
+
+| readout | mean helix population |
+|---|---|
+| Geometric (α-basin sampling) | 0.52 |
+| Structural — retrieval | 0.21 |
+| FACET-D2 | 0.07 |
+| (d2D reference) | 0.01 |
+| (CheSPI 4-state reference) | 0.04 |
+
+Report whichever answers the question you're asking — sampling fraction (geometric), cooperative-SS from retrieval, or cooperative-SS from the retrieval-free Gaussian engine.
 
 #### Structural (retrieval) mode — kernel-weighted Bayesian retrieval
 
@@ -198,14 +211,18 @@ Conceptually this is *"non-parametric d2D using FACET's learned shift embeddings
 For IDPs and cross-tool cross-checks, use the retrieval-free d2D-style engine:
 
 ```python
-from facet import predict_ss_populations, ShiftList
+from facet import predict_ss_populations
+from facet.io.bmrb import fetch_bmrb             # or read_auto(path) for files
 
-sl = ShiftList.from_bmrb_file("bmr19253.str")  # or from_tab, from_csv...
+sl = fetch_bmrb("19253")                         # tau K18 (canonical IDP)
 res = predict_ss_populations(sl, smooth=True, min_nuclei=3)
 
 for sid, pops in zip(res.seq_ids, res.populations):
     h, e, p, c = pops
     print(f"{sid}: H={h:.2f} E={e:.2f} P={p:.2f} C={c:.2f}")
+
+# Sequence-average 4-vector:
+print(res.mean_populations)   # (H, E, P, C)
 ```
 
 Per-residue inference:
@@ -260,10 +277,11 @@ result.to_ensemble_json("ensemble.json")
 
 #### Practical recommendation for IDP / IDR analysis
 
-- Use **geometric mode** (`basin_populations`) as a Ramachandran-region fingerprint: identify residues with elevated α, β, or PPII propensity, spot transient-structure regions.
-- Use **structural mode** (`structural_populations`) for canonical SS-state population numbers suitable for ensemble reweighting, direct citation alongside d2D/CheSPI, or paper methods sections.
+- Use **geometric mode** (`basin_populations`) as a Ramachandran-region fingerprint: identify residues with elevated α, β, or PPII propensity, spot transient-structure regions. This is the honest per-residue φ/ψ-sampling claim, not a cooperative-SS number.
+- Use **FACET-D2** (`facet.predict_ss_populations`) for canonical (H / E / PPII / C) populations suitable for ensemble reweighting, direct citation alongside d2D / CheSPI, or paper methods sections. This is the retrieval-free engine and doesn't inherit folded-neighbor DSSP bias.
+- Treat **retrieval-based structural mode** (`structural_populations`) as a secondary readout: fine on folded / partially-folded samples, but over-estimates helix on pure IDPs (~20% on tau K18). Good for cross-checking FACET-D2 on structured regions.
 - Use the **ensemble export** (`to_ensemble_csv` / `to_ensemble_json`) as seed conformers for BME / ENSEMBLE pipelines — no separate neighbour-retrieval step needed downstream.
-- For rigorous cross-check, run **d2D** (Camilloni et al. 2012, https://github.com/carlocamilloni/d2D) or **CheSPI** (Nielsen & Mulder 2022) alongside FACET. All three agree well on transient-structure locations; the magnitudes you'd cite come from whichever tool your reviewer prefers.
+- For rigorous cross-check, run **d2D** (Camilloni et al. 2012, https://github.com/carlocamilloni/d2D) or **CheSPI** (Nielsen & Mulder 2021, https://github.com/protein-nmr/CheSPI) alongside FACET-D2. All three agree well on transient-structure *locations*; the magnitudes you'd cite come from whichever tool your reviewer prefers.
 
 ## Model
 

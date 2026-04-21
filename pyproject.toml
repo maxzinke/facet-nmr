@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "facet-nmr"
-version = "0.2.0"
+version = "0.3.0"
 description = "Retrieval-augmented prediction of backbone torsion angles, secondary structure, and Ramachandran basin populations from NMR chemical shifts"
 readme = "README.md"
 license = "MIT"

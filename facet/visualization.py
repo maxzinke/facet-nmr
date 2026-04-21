@@ -684,9 +684,9 @@ def plot_residual_ss(
             other_arr[pos] = o
 
     n_rows = math.ceil(total_positions / residues_per_row)
-    # Match plot_sequence_ss row-height budget so the two figures visually
-    # stack at the same cadence.
-    row_height_in = 1.6
+    # Stacked-bar layout is more compact than the old 4-track version —
+    # one track per row instead of four — so row height shrinks accordingly.
+    row_height_in = 0.95
 
     fig, axes = plt.subplots(
         n_rows, 1,
@@ -695,21 +695,20 @@ def plot_residual_ss(
     )
     axes = axes.flatten()
 
-    # Track layout inside each row: four tracks stacked vertically with
-    # a small gap, each track 1.0 unit tall. Y_SEQ/Y_NUM mirror the
-    # sequence-plot offsets so the two figures line up visually.
+    # Single stacked-bar track per row: each residue is one vertical bar
+    # of total height 1.0, segmented by basin fraction (alpha at bottom,
+    # then beta, PPII, other at top). The stack order is the d2D/CheSPI
+    # convention — alpha/beta are the "structured" fractions, PPII and
+    # other are the "flexible" fractions, so they read bottom-up from
+    # structured to flexible.
     _labels_for_mode = (
         BASIN_LABELS_STRUCT if mode == "structural" else BASIN_LABELS_GEOM
     )
-    track_order = ["other", "ppii", "beta", "alpha"]
-    TRACK_HEIGHT = 1.0
-    TRACK_GAP = 0.15
-    track_bases = {
-        name: i * (TRACK_HEIGHT + TRACK_GAP) for i, name in enumerate(track_order)
-    }
-    Y_TOP = track_bases["alpha"] + TRACK_HEIGHT
-    Y_SEQ_IDP = -0.7
-    Y_NUM_IDP = -1.35
+    STACK_ORDER = ("alpha", "beta", "ppii", "other")
+    STACK_HEIGHT = 1.0
+    Y_TOP = STACK_HEIGHT
+    Y_SEQ_IDP = -0.32
+    Y_NUM_IDP = -0.72
 
     for row_idx in range(n_rows):
         ax = axes[row_idx]
@@ -718,42 +717,30 @@ def plot_residual_ss(
         row_len = p1 - p0
         xs = np.arange(row_len)
 
-        for name, values in [
-            ("alpha", alpha_arr),
-            ("beta", beta_arr),
-            ("ppii", ppii_arr),
-            ("other", other_arr),
-        ]:
-            color = BASIN_COLORS[name]
-            base = track_bases[name]
-            vals = values[p0:p1]
+        # Draw stacked bars, alpha at the bottom.
+        bottom = np.zeros(row_len, dtype=np.float64)
+        arr_by_name = {"alpha": alpha_arr, "beta": beta_arr,
+                       "ppii": ppii_arr, "other": other_arr}
+        for name in STACK_ORDER:
+            vals = arr_by_name[name][p0:p1]
             heights = np.where(np.isnan(vals), 0.0, vals)
             ax.bar(
                 xs, heights,
-                width=0.82,        # match sequence-plot bar width
-                bottom=base,
-                color=color,
+                width=0.9,          # wider bars (one track means no stacking gap)
+                bottom=bottom,
+                color=BASIN_COLORS[name],
                 edgecolor="none",
                 zorder=2,
             )
-            # Track baseline
-            ax.plot(
-                [-0.5, row_len - 0.5], [base, base],
-                color="#D5D8DC", linewidth=0.7, zorder=1,
-            )
-            # Track label — match sequence-plot label font size (9, bold)
-            ax.text(
-                -1.5, base + TRACK_HEIGHT / 2, _labels_for_mode[name],
-                ha="right", va="center",
-                fontsize=9, fontweight="bold",
-                color=color,
-            )
+            bottom = bottom + heights
 
-        # Sequence letters — match plot_sequence_ss exactly:
-        #   assigned residue   → bold one-letter code in near-black
-        #   unassigned (gap)   → one-letter code in light gray if a
-        #                        reader-supplied sequence is available,
-        #                        else a dot placeholder. Also in light gray.
+        # Light baseline under the bar band.
+        ax.plot(
+            [-0.5, row_len - 0.5], [0.0, 0.0],
+            color="#D5D8DC", linewidth=0.7, zorder=1,
+        )
+
+        # Sequence letters below the bar band.
         for i, pos in enumerate(range(p0, p1)):
             r = position_to_residue.get(pos)
             if r is None:
@@ -778,8 +765,7 @@ def plot_residual_ss(
                     color=COLOR_SEQ,
                 )
 
-        # Residue numbers — same cadence + style as plot_sequence_ss
-        # (every 10 + row termini).
+        # Residue numbers — every 10 + row termini.
         for i, pos in enumerate(range(p0, p1)):
             seq_id = pos + seq_id_base
             if seq_id % 10 == 0 or i == 0 or i == row_len - 1:
@@ -790,19 +776,20 @@ def plot_residual_ss(
                     color=COLOR_NUM,
                 )
 
-        # Keep the x-range identical across rows so the two figures align
-        # when stacked (partial last row → short content but full x-extent).
+        # Keep x-range identical across rows so partial last row aligns.
         ax.set_xlim(-2.5, residues_per_row)
-        ax.set_ylim(Y_NUM_IDP - 0.25, Y_TOP + 0.15)
+        ax.set_ylim(Y_NUM_IDP - 0.18, Y_TOP + 0.08)
         ax.axis("off")
 
     if title is None:
         source = result.source or "FACET"
         mode_suffix = (
-            "structural (d2D-style)" if mode == "structural" else "geometric basins"
+            "Cooperative SS — retrieval-based"
+            if mode == "structural"
+            else "Basin sampling (φ/ψ fingerprint)"
         )
         title = (
-            f"Residual SS populations ({mode_suffix}) — "
+            f"{mode_suffix} — "
             f"{Path(source).stem if source else 'prediction'}"
         )
     # Match plot_sequence_ss title styling.

@@ -696,15 +696,16 @@ def plot_residual_ss(
     axes = axes.flatten()
 
     # Single stacked-bar track per row: each residue is one vertical bar
-    # of total height 1.0, segmented by basin fraction (alpha at bottom,
-    # then beta, PPII, other at top). The stack order is the d2D/CheSPI
-    # convention — alpha/beta are the "structured" fractions, PPII and
-    # other are the "flexible" fractions, so they read bottom-up from
-    # structured to flexible.
+    # segmented by basin fraction. We only paint the *informative* stack
+    # — alpha / beta / PPII — and leave the remainder (other / coil) as
+    # blank background. This keeps the figure visually clean: mostly-coil
+    # IDPs render as short bars with only the transient-structure signal
+    # showing, instead of a wall of gray "coil" blocks swamping the real
+    # signal. A faint 1.0 baseline line anchors the max stack height.
     _labels_for_mode = (
         BASIN_LABELS_STRUCT if mode == "structural" else BASIN_LABELS_GEOM
     )
-    STACK_ORDER = ("alpha", "beta", "ppii", "other")
+    STACK_ORDER = ("alpha", "beta", "ppii")   # 'other' intentionally omitted
     STACK_HEIGHT = 1.0
     Y_TOP = STACK_HEIGHT
     Y_SEQ_IDP = -0.32
@@ -717,16 +718,17 @@ def plot_residual_ss(
         row_len = p1 - p0
         xs = np.arange(row_len)
 
-        # Draw stacked bars, alpha at the bottom.
+        # Draw stacked bars, alpha at the bottom, skipping the 'other'
+        # baseline — mostly-coil residues render as short stacks so the
+        # real signal (α/β/PPII peaks) is visually dominant.
         bottom = np.zeros(row_len, dtype=np.float64)
-        arr_by_name = {"alpha": alpha_arr, "beta": beta_arr,
-                       "ppii": ppii_arr, "other": other_arr}
+        arr_by_name = {"alpha": alpha_arr, "beta": beta_arr, "ppii": ppii_arr}
         for name in STACK_ORDER:
             vals = arr_by_name[name][p0:p1]
             heights = np.where(np.isnan(vals), 0.0, vals)
             ax.bar(
                 xs, heights,
-                width=0.9,          # wider bars (one track means no stacking gap)
+                width=0.9,
                 bottom=bottom,
                 color=BASIN_COLORS[name],
                 edgecolor="none",
@@ -734,10 +736,15 @@ def plot_residual_ss(
             )
             bottom = bottom + heights
 
-        # Light baseline under the bar band.
+        # Baseline at y=0 and a faint y=1.0 anchor so readers can still
+        # read absolute fractions off the bars.
         ax.plot(
             [-0.5, row_len - 0.5], [0.0, 0.0],
             color="#D5D8DC", linewidth=0.7, zorder=1,
+        )
+        ax.plot(
+            [-0.5, row_len - 0.5], [1.0, 1.0],
+            color="#E8EAED", linewidth=0.6, linestyle=(0, (2, 2)), zorder=1,
         )
 
         # Sequence letters below the bar band.
@@ -796,13 +803,15 @@ def plot_residual_ss(
     fig.suptitle(title, fontsize=12, y=0.99, fontweight="bold", color=COLOR_SEQ)
 
     # Legend block (basin colors) — placed bottom-center to mirror the
-    # sequence-plot legend.
+    # sequence-plot legend. 'other' is intentionally omitted as a colored
+    # swatch; it's the unpainted remainder of each stack (bar top → 1.0).
     from matplotlib.patches import Patch
     handles = [
         Patch(facecolor=BASIN_COLORS["alpha"], label=_labels_for_mode["alpha"]),
         Patch(facecolor=BASIN_COLORS["beta"],  label=_labels_for_mode["beta"]),
         Patch(facecolor=BASIN_COLORS["ppii"],  label=_labels_for_mode["ppii"]),
-        Patch(facecolor=BASIN_COLORS["other"], label=_labels_for_mode["other"]),
+        Patch(facecolor="white", edgecolor="#B0B0B0", linewidth=0.8,
+              label=f"{_labels_for_mode['other']} (blank)"),
     ]
     fig.legend(
         handles=handles,

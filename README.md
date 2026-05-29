@@ -100,7 +100,7 @@ FACET was trained on the full backbone (H, HA, N, CA, CB, C). Missing shifts are
 | Available shifts | Expected behaviour |
 |---|---|
 | Full backbone (H, HA, N, CA, CB, C) | Recommended. Paper-reported tier distribution. |
-| Missing HA | Slight quality drop, mostly on coil. Helix/strand largely unaffected. |
+| Missing HA | Auto-routed to the mask-safe shift-retrieval fallback (the parametric head alone collapses without HA). ~18° median φ/ψ error vs ~16° on the full backbone. |
 | Missing C' or CB | Noticeable drop on β / PPII discrimination. |
 | Only H, N, CA (e.g. TROSY-HNCA minimal set) | SS prediction workable; phi/psi largely Medium/Low tier. |
 | Only H, N (e.g. 15N HSQC only) | Not recommended. Most residues will be Flexible. |
@@ -116,6 +116,8 @@ The check catches mis-referencing on N, HA, H, C', and CB reliably. It is weakes
 ### Perdeuterated samples
 
 For samples with deuterium labeling, set the `--deuteration` flag (or the Gradio dropdown) to `protonated` / `perdeut-exchanged` / `perdeut-unexchanged` / `ilv-methyl`. FACET applies an analytical 13C isotope correction (Venters et al. 1996; Hansen 1988) — roughly +0.29 ppm to CA, +0.68 ppm to CB, +0.10 ppm to C' for standard perdeut-exchanged samples — to recover protonated-equivalent shifts.
+
+**Missing HA (common in perdeuterated samples).** When the α-proton is unobserved, the parametric torsion head — and the embedding retrieval, which shares the encoder — collapse toward ~0° because the model was trained never to lose HA. As of v0.3.1, FACET detects HA-missing residues and routes them to a **mask-safe shift-retrieval fallback** that matches on the observed atoms only (the missing channel drops out of the distance), recovering **~18° median φ/ψ error versus ~53° for the raw model** on held-out HA-stripped data. These residues are tiered from retrieval-cluster agreement and carry a real per-residue spread. Disable with `mask_safe_fallback=False`.
 
 **The correction is a first-order average and not perfect.** It uses residue-type-independent coefficients, ignores three-bond effects, and doesn't handle temperature / solvent / labelling-scheme variation. As a result, **perdeuterated samples show systematically more Flexible-tier assignments than equivalent protonated samples** — the encoder's embedding drifts into sparser regions of retrieval space, and FACET honestly flags residues where it can't find a tight cluster instead of emitting confidently-wrong phi/psi.
 

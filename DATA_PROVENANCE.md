@@ -54,64 +54,59 @@ aims-and-policies page promises free *access* without stating a licence grant. A
 of a statement on one page is not absence of a licence. The CC0 position follows from
 wwPDB membership, which the same document already noted for the PDB.
 
-## Aggregation was tried and rejected on measurement
+## The retrieval scorer had a defect; aggregation was a symptom, not a cure
 
-The obvious fix — replace records with aggregates — does not work. It is recorded
-here because the reasoning is sound and someone will propose it again.
+An aggregated ("centroid") reference was built and benchmarked, appeared to beat the
+full record set when atoms were missing, and was then abandoned when the full
+benchmark said otherwise. Both readings were wrong, for the same underlying reason.
 
-`scripts/build_centroid_reference.py` compresses the reference 88×, to 3,522 rows,
-each a mean over ~88 observations grouped by residue type, secondary structure and
-shift-space cluster. It carries no deposition identifiers and no individual
-measurement, so it would have resolved the redistribution question outright.
+### The real defect
 
-Measured on the project's held-out coverage-ablation benchmark
-(`benchmarks/facet_coverage_ablation.py` in the CRYSTALLINE-FID tree; leak-safe split
-by sequence similarity, 3,404 scored residues from 39 held-out entries; median
-angular error in degrees):
+`masked_retrieval.py::_query` scored candidates as a **mean** squared z over the
+columns shared with the query, floored only at `n_shared >= 2`. A row sharing two
+columns is judged on two samples and wins the argmin far too often — a winner's curse.
+Measured at `-H-HA`: **88% of queries were won by a row covering under 40% of the
+query**, and the Spearman correlation between rank-1 distance and rank-1 error was
+**+0.007**. The distance carried no quality information at all.
 
-| index | rows | complete | −HA | −H | −H−HA | −CB | −H−HA−CB |
-|---|---|---|---|---|---|---|---|
-| full records | 310,923 | **15.99** | **18.15** | **18.00** | 23.87 | **17.73** | 24.29 |
-| centroids, 14× | 22,128 | 19.73 | 19.99 | 19.95 | **20.18** | 20.21 | **21.75** |
-| centroids, 88× | 3,522 | 22.95 | 23.21 | 22.76 | 23.16 | 22.83 | 23.25 |
+The fix ranks candidates by query coverage before ranking by distance, reusing the
+`k*5` candidate cap already present. Median angular error, on the project's
+coverage-ablation benchmark (leak-safe split, 3,404 scored residues), independently
+reproduced twice:
 
-Compression was measured as a curve rather than a single setting, because the first
-attempt used 88× arbitrarily. Halving the loss requires dropping to 14×, and the
-trend implies parity needs essentially no compression at all.
+| scenario | before | after | gain |
+|---|---|---|---|
+| complete | 15.99 | **13.61** | −2.38 |
+| −HA | 18.15 | **13.64** | −4.51 |
+| −H | 18.00 | **13.57** | −4.43 |
+| −H−HA | 23.87 | **13.42** | **−10.45** |
+| −CB | 17.73 | **14.05** | −3.68 |
+| −H−HA−CB | 24.29 | **14.08** | **−10.21** |
 
-**Why:** accuracy tracks point density in shift space. For real held-out queries the
-nearest neighbour sits at standardized distance 83.8 in the full index and 270.7 in
-the 88× index — **3.2× further**. Retrieval needs a close neighbour, and the
-information that provides one is the fine detail of the records themselves. Compressing
-it removes exactly the thing being used. This is an information-theoretic limit, not a
-clustering-quality problem: cluster conformational purity was verified high (median φ
-spread 0.7°) and mask usability was unaffected (100% both).
+Coverage sensitivity collapses from +8.3° to +0.66°: after the fix, accuracy barely
+depends on how many atoms are present. Confirmed on a never-tuned validation split
+(14.72→20.64 becomes 12.50→12.72), with every paired bootstrap CI excluding zero.
 
-### A useful side-finding: aggregation helps when coverage is poor
+### Why aggregation appeared to help
 
-The compressed indices are **flatter** across scenarios, and they cross over:
+The centroid index filled its masks by majority vote, giving rows near-complete
+coverage (occupancy 0.957 against 0.856). That *accidentally* did what the coverage
+requirement now does deliberately. Three independent checks confirm averaging was
+never the active ingredient: a raw random subset of the same size is flatter and
+better than the shipped centroid index; replacing the averaged *label* with one
+member's angles improves it by ~7°, while replacing the averaged *shift vector*
+changes nothing; and the flatness effect reproduces across index sizes with no
+averaging at all.
 
-* complete input — full index better by 3.7°
-* −H−HA — **aggregated better by 3.7°** (20.18 vs 23.87)
-* −H−HA−CB — **aggregated better by 2.5°** (21.75 vs 24.29)
+With the scorer fixed there is no crossover left — the full record index is best at
+every coverage level, so there is nothing for an adaptive scheme to switch between.
 
-Averaging denoises, and denoising matters more when there is less signal. A
-coverage-dependent index choice — full records when atoms are present, aggregated when
-they are sparse — would improve the hardest cases by ~2.5–3.7° over what ships today.
-That is a prediction-quality opportunity, not a licensing fix, since the full index
-would still ship.
+### A units bug in the builder
 
-### Why an earlier evaluation said the opposite
+`scripts/build_centroid_reference.py` called `np.radians()` on `phi`/`psi` values that
+are **already radians** in the reference file, compressing them onto a 1/57th arc. The
+aggregated numbers that motivated abandoning the approach were inflated by it, and the
+same mistake in the evaluation scripts reported radians as degrees, making errors look
+~57× smaller than they were. Both are corrected; the episode is recorded because the
+misleading numbers looked plausible for a long time.
 
-A self-consistency evaluation — querying with rows drawn from the reference
-distribution itself — showed the aggregated index equal or better in every
-missing-atom scenario (−0.02° to −0.13°). That measurement was real but answered the
-wrong question: clean, complete, same-pipeline queries are served well by a smoothed
-index; real proteins carrying referencing offsets and partial assignments are not.
-
-Its absolute errors were ~0.35° against a true ~16° — a 45× discrepancy that should
-have been treated as disqualifying the whole evaluation rather than noted as a
-caveat alongside a recommendation.
-
-**Only the held-out benchmark decides.** Anything else ranks methods on a question
-nobody asked.

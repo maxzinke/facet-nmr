@@ -86,10 +86,25 @@ ASSETS: dict[str, Asset] = {
     ),
 }
 
-#: Where releases are published. Overridable so a site can mirror them internally.
+#: Where the artifacts are published.
+#:
+#: A HuggingFace model repository rather than a GitHub release: it is built for model
+#: weights, CDN-backed, and a 106 MB file is unremarkable there. The ``resolve`` URL
+#: form serves raw file bytes over plain HTTP, so nothing here needs the
+#: ``huggingface_hub`` package — this module depends only on the standard library.
+#:
+#: Pinned to a REVISION, not to ``main``. The SHA-256 values below describe the exact
+#: files this release was validated against; if the URL followed a moving branch, a
+#: later upload would break every installed copy's checksum check rather than being
+#: picked up cleanly by a new release.
+#:
+#: Override with ``$FACET_ASSET_URL`` to mirror internally — the path layout is simply
+#: ``<BASE_URL>/<filename>``.
+HF_REPO = os.environ.get("FACET_ASSET_REPO", "SiXa18/facet-weights")
+HF_REVISION = os.environ.get("FACET_ASSET_REVISION", "v0.3.1")
 BASE_URL = os.environ.get(
     "FACET_ASSET_URL",
-    "https://github.com/bluegems661/facet-nmr/releases/download/weights-v0.3.1",
+    f"https://huggingface.co/{HF_REPO}/resolve/{HF_REVISION}",
 ).rstrip("/")
 
 _PKG = Path(__file__).resolve().parent

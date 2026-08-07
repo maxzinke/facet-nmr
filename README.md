@@ -36,8 +36,11 @@ with `$FACET_HOME`), not shipped in the wheel. The retrieval index alone is 106 
 past PyPI's 100 MB per-file limit, so a bundled wheel could not be published at all.
 Downloading also means a corrected BMRB entry can reach you without a new release.
 
-Each file is verified against a pinned SHA-256. To prepare an offline or container
-install ahead of time:
+Files come from a HuggingFace model repository
+([SiXa18/facet-weights](https://huggingface.co/SiXa18/facet-weights)), pinned to a
+revision so a later upload cannot change what an installed copy resolves. Each is
+verified against a pinned SHA-256. To prepare an offline or container install ahead of
+time:
 
 ```
 python -m facet.assets          # fetch everything now

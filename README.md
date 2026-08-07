@@ -4,18 +4,49 @@
 
 **v0.3.0 — retrieval-augmented + retrieval-free SS populations.** Phi/psi inference is backed by a kNN + DBSCAN lookup over a bundled 220K-residue reference index, producing multi-modal predictions with per-residue FACET tiers (High / Medium / Low / Flexible) plus α / β / PPII / other basin populations. Alongside, a retrieval-free d2D-style per-AA Gaussian engine (`facet.predict_ss_populations`) reports canonical (H / E / PPII / C) populations fit on 49K LACS-free curated residues — use this on IDPs where retrieval-derived populations inherit folded-neighbor DSSP bias. Clean 745-protein φ/ψ test benchmark (53,841 paired residues):
 
-| Metric | Reference baseline | **FACET v0.2** |
+| Metric | TALOS-N | **FACET** |
 |---|---|---|
 | All-residue median | 13.57° | **12.65°** (−0.92°) |
-| fail25 rate | 29.6% | **27.4%** |
-| Coil median | 22.8° | **20.9°** (−1.92°) |
-| Helix median | 8.5° | **8.0°** (−0.46°) |
-| Strand median | 15.3° | **14.6°** (−0.72°) |
-| High-tier residues (76%) | — | **10.6° median / 19.6% fail25** |
-| Coverage | 98.6% | **99.2%** |
-| Head-to-head win rate | 45.9% | **52.1%** |
+| fail25 rate | 29.7% | **27.4%** |
+| Mean | 28.9° | **27.4°** |
+| p90 | 102.7° | **96.5°** |
+| Coil median (n=17,917) | 22.8° | **20.9°** (−1.92°) |
+| Helix median (n=24,099) | 8.5° | **8.0°** (−0.46°) |
+| Strand median (n=11,825) | 15.3° | **14.6°** (−0.72°) |
+| Rigid (n=46,902) | 12.6° | **11.8°** |
+| Flexible (n=6,939) | 20.5° | **18.7°** |
+| Head-to-head win rate | 46.9% | **53.1%** |
 
-FACET wins on every SS class and on both rigid (−0.77°) and flexible (−1.76°) subsets. The **High tier — 76% of residues — carries 10.6° median error at 19.6% failure rate**, making it directly usable for structure calculation restraints.
+Coverage: FACET emits a prediction for 99.2% of the 55,036 scored residues, TALOS-N for
+98.6%. All figures above are over the **53,841 residues both methods predict**, so the
+comparison is like-for-like; the win rate uses that same denominator (28,609 vs 25,232,
+no exact ties).
+
+FACET wins on every SS class and on both rigid (−0.77°) and flexible (−1.76°) subsets.
+The **High tier — 76% of residues — carries 10.6° median error at 19.6% failure rate**,
+making it directly usable for structure calculation restraints.
+
+### Missing atoms
+
+When required shifts are unassigned — HA in perdeuterated samples, or incomplete
+assignments generally — φ/ψ come from a mask-aware fallback that matches on whichever
+atoms are present. On a held-out coverage-ablation benchmark (39 entries, 3,404 scored
+residues; note this is a **different and much smaller test set**, and a different error
+metric, so these numbers are not comparable with the table above):
+
+| available | median |
+|---|---|
+| all backbone shifts | 13.6° |
+| HA absent | 13.6° |
+| H absent | 13.6° |
+| H and HA absent | 13.4° |
+| CB absent | 14.1° |
+| H, HA and CB absent | 14.1° |
+
+Losing H or HA costs nothing measurable; losing CB costs ~0.5° (the only differences
+significant under an entry-level paired bootstrap). A never-tuned validation split
+orders the scenarios monotonically, so the apparent inversions above are subset noise
+rather than a finding.
 
 ## Data and licensing
 

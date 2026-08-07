@@ -211,17 +211,17 @@ def _load_cached_masked_retrieval(index_path: str):
 
 
 def _find_index() -> Path | None:
-    """Locate the bundled retrieval index, if any."""
-    import os
-    pkg = Path(__file__).resolve().parent
-    for candidate in [
-        pkg / "weights" / "facet_retrieval_index.npz",
-        Path(os.environ.get("FACET_INDEX", "")) if os.environ.get("FACET_INDEX") else None,
-        Path.home() / ".facet" / "facet_retrieval_index.npz",
-    ]:
-        if candidate is not None and candidate.exists():
-            return candidate
-    return None
+    """Locate the retrieval index, downloading it on first use if needed.
+
+    Resolution and download live in :mod:`facet.assets`; see there for why these files
+    are not bundled (the index alone is 106 MB, over PyPI's per-file limit).
+    """
+    from .assets import AssetUnavailable, resolve
+    try:
+        return resolve("facet_retrieval_index.npz")
+    except AssetUnavailable as exc:
+        logger.warning("retrieval index unavailable: %s", exc)
+        return None
 
 
 # Maps the mask-safe retrieval confidence tier onto the DBSCAN tier vocabulary
@@ -232,17 +232,14 @@ _MASKED_CONF_TO_TIER = {
 
 
 def _find_shift_reference() -> Path | None:
-    """Locate the bundled mask-safe shift-retrieval reference index, if any."""
-    import os
-    pkg = Path(__file__).resolve().parent
-    for candidate in [
-        pkg / "weights" / "facet_shift_reference.npz",
-        Path(os.environ["FACET_SHIFT_REFERENCE"]) if os.environ.get("FACET_SHIFT_REFERENCE") else None,
-        Path.home() / ".facet" / "facet_shift_reference.npz",
-    ]:
-        if candidate is not None and candidate.exists():
-            return candidate
-    return None
+    """Locate the mask-safe shift reference, downloading it on first use if needed.
+
+    Declared optional in the asset manifest: when it cannot be fetched, HA-missing
+    residues fall back to the parametric head with a warning rather than the run
+    failing.
+    """
+    from .assets import resolve
+    return resolve("facet_shift_reference.npz")
 
 
 def _find_checkpoint() -> Path:
@@ -253,14 +250,14 @@ def _find_checkpoint() -> Path:
         pkg / "weights" / "facet_v3.pt",
         pkg / "weights" / "best.onnx",
         Path(os.environ.get("FACET_WEIGHTS", "")) if os.environ.get("FACET_WEIGHTS") else None,
-        Path.home() / ".facet" / "facet_v3.pt",
     ]:
         if candidate is not None and candidate.exists():
             return candidate
-    raise FileNotFoundError(
-        "FACET weights not found. Set FACET_WEIGHTS env var or place "
-        "facet_v3.pt in ~/.facet/ or <package>/weights/."
-    )
+    # Not local: fetch it. resolve() raises AssetUnavailable (a FileNotFoundError)
+    # with a message naming the URL and cache directory, so the previous contract of
+    # "raises FileNotFoundError when weights are missing" still holds.
+    from .assets import resolve
+    return resolve("facet_v3.pt")
 
 
 @torch.no_grad()

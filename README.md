@@ -17,6 +17,36 @@
 
 FACET wins on every SS class and on both rigid (−0.77°) and flexible (−1.76°) subsets. The **High tier — 76% of residues — carries 10.6° median error at 19.6% failure rate**, making it directly usable for structure calculation restraints.
 
+## Data and licensing
+
+Code and bundled data are MIT (`LICENSE`). Model weights and fitted parameters are
+produced by this project. Structural data derive from the PDB and chemical-shift data
+from the BMRB — both released under **CC0 1.0**, a public-domain dedication with no
+conditions attached.
+
+If you use this tool, citing BMRB is appreciated:
+Hoch *et al.*, *Nucleic Acids Res.* **51**, D368 (2023), doi:10.1093/nar/gkac1050.
+
+See [DATA_PROVENANCE.md](DATA_PROVENANCE.md) for what each bundled file contains.
+
+## Model weights
+
+Weights and reference data are **downloaded on first use** into `~/.facet/` (override
+with `$FACET_HOME`), not shipped in the wheel. The retrieval index alone is 106 MB,
+past PyPI's 100 MB per-file limit, so a bundled wheel could not be published at all.
+Downloading also means a corrected BMRB entry can reach you without a new release.
+
+Each file is verified against a pinned SHA-256. To prepare an offline or container
+install ahead of time:
+
+```
+python -m facet.assets          # fetch everything now
+FACET_NO_DOWNLOAD=1 facet ...   # never fetch; fail or degrade instead
+```
+
+Without the mask-safe shift reference, residues missing HA fall back to the parametric
+head with a warning rather than failing.
+
 ## Quick Start
 
 ```bash

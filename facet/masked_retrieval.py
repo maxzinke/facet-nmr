@@ -35,8 +35,23 @@ AA_ORDER = [
 ]
 AA_TO_INDEX = {aa: i for i, aa in enumerate(AA_ORDER)}
 
-# Wishart/Schwarzinger consensus random-coil shifts (ppm). Static branch of
+# Consensus random-coil shifts (ppm), used to convert observed shifts to secondary
+# shifts. Static branch of
 # crystalline_fid.crystalline.baselines.database_lookup._to_secondary_shifts.
+#
+# Values follow the standard random-coil references:
+#   Wishart, D. S., Bigam, C. G., Holm, A., Hodges, R. S. & Sykes, B. D.
+#   "1H, 13C and 15N random coil NMR chemical shifts of the common amino acids.
+#   I. Investigations of nearest-neighbor effects."
+#   J. Biomol. NMR 5, 67-81 (1995). doi:10.1007/BF00227471
+#
+#   Schwarzinger, S., Kroon, G. J. A., Foss, T. R., Chung, J., Wright, P. E. &
+#   Dyson, H. J. "Sequence-dependent correction of random coil NMR chemical shifts."
+#   J. Am. Chem. Soc. 123, 2970-2978 (2001). doi:10.1021/ja003760i
+#
+# Published numeric reference values from the literature, cited rather than merely
+# attributed by surname -- the same standard applied to the other borrowed constants
+# in this codebase.
 RANDOM_COIL_SHIFTS: dict[str, dict[str, float]] = {
     "ALA": {"H": 8.24, "HA": 4.32, "N": 123.8, "CA": 52.5, "CB": 19.1, "C": 177.8},
     "ARG": {"H": 8.23, "HA": 4.34, "N": 120.5, "CA": 56.0, "CB": 30.7, "C": 176.3},

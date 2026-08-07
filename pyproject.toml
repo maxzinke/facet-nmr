@@ -50,5 +50,19 @@ Documentation = "https://github.com/bluegems661/facet-nmr#readme"
 [tool.hatch.build.targets.wheel]
 packages = ["facet"]
 
+# Large artifacts are NOT shipped in the wheel. facet_retrieval_index.npz alone is
+# 106 MB and PyPI rejects any file over 100 MB, so a bundled wheel (127.5 MB) cannot
+# be uploaded at all. facet/assets.py downloads them into ~/.facet on first use and
+# verifies each against a pinned SHA-256.
+#
+# Small fitted parameters under facet/data/ stay bundled -- they are kilobytes and
+# needed for the retrieval-free path to work offline out of the box.
+exclude = [
+  "facet/weights/*.npz",
+  "facet/weights/*.pt",
+  "facet/weights/*.onnx",
+  "facet/weights/*.json",
+]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

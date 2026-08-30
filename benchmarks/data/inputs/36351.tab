@@ -1,0 +1,74 @@
+REMARK Chemical shift table for BMRB entry 36351
+
+DATA FIRST_RESID 1
+
+DATA SEQUENCE LVVIVQADWN APGWF
+
+VARS   RESID RESNAME ATOMNAME SHIFT
+FORMAT %4d   %1s     %4s      %8.3f
+
+   1 L   HA      4.445
+   1 L   N     119.334
+   1 L   CA     55.150
+   1 L   CB     44.178
+   2 V   HN      8.552
+   2 V   HA      4.199
+   2 V   N     125.884
+   2 V   CA     61.573
+   2 V   CB     29.760
+   3 V   HN      8.101
+   3 V   HA      4.344
+   3 V   N     118.918
+   3 V   CA     65.683
+   3 V   CB     36.229
+   4 I   HN      9.714
+   4 I   HA      4.436
+   4 I   N     123.360
+   4 I   CA     61.422
+   4 I   CB     40.546
+   5 V   HN      8.596
+   5 V   HA      3.416
+   5 V   N     119.922
+   5 V   CA     66.880
+   5 V   CB     29.283
+   6 Q   HN      8.637
+   6 Q   HA      4.693
+   6 Q   N     126.874
+   6 Q   CB     29.672
+   7 A   HN      7.128
+   7 A   HA      3.856
+   7 A   N     124.765
+   7 A   CA     53.805
+   7 A   CB     24.130
+   8 D   HN      5.630
+   8 D   HA      2.997
+   8 D   CA     50.288
+   8 D   CB     38.123
+   9 W   HN      6.399
+   9 W   HA      4.161
+   9 W   N     110.549
+   9 W   CA     59.893
+   9 W   CB     29.003
+  10 N   HN      7.430
+  10 N   HA      4.833
+  10 N   N     113.381
+  10 N   CB     40.789
+  11 A   HN      7.929
+  11 A   HA      4.649
+  11 A   N     125.734
+  11 A   CB     20.778
+  12 P   HA      4.227
+  12 P   CA     64.629
+  12 P   CB     32.776
+  13 G   HN      6.806
+  13 G   N     101.047
+  13 G   CA     44.326
+  14 W   HN      8.455
+  14 W   HA      4.291
+  14 W   N     120.655
+  14 W   CA     59.072
+  14 W   CB     31.843
+  15 F   HN      9.201
+  15 F   HA      4.854
+  15 F   N     123.029
+  15 F   CB     42.351

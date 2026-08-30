@@ -1,0 +1,64 @@
+REMARK Chemical shift table for BMRB entry 34801
+
+DATA FIRST_RESID 1
+
+DATA SEQUENCE XDVFMKKLSK DKX
+
+VARS   RESID RESNAME ATOMNAME SHIFT
+FORMAT %4d   %1s     %4s      %8.3f
+
+   2 D   HN      7.935
+   2 D   HA      4.539
+   2 D   N     126.491
+   2 D   CA     54.888
+   2 D   CB     40.937
+   3 V   HN      7.810
+   3 V   HA      3.736
+   3 V   N     118.591
+   3 V   CA     65.239
+   3 V   CB     31.532
+   4 F   HN      7.616
+   4 F   HA      4.317
+   4 F   N     120.894
+   4 F   CA     60.695
+   4 F   CB     38.302
+   5 M   HN      8.072
+   5 M   HA      4.224
+   5 M   N     118.663
+   5 M   CA     57.763
+   5 M   CB     31.680
+   6 K   HN      8.150
+   6 K   HA      3.969
+   6 K   N     121.005
+   6 K   CA     58.354
+   6 K   CB     32.017
+   7 K   HN      8.024
+   7 K   HA      4.175
+   7 K   N     120.463
+   7 K   CA     58.017
+   8 L   HN      8.419
+   8 L   HA      3.972
+   8 L   N     121.319
+   8 L   CA     59.588
+   8 L   CB     41.643
+   9 S   HN      7.910
+   9 S   HA      4.092
+   9 S   N     112.151
+   9 S   CA     61.464
+   9 S   CB     62.777
+  10 K   HN      7.836
+  10 K   HA      4.172
+  10 K   N     122.568
+  10 K   CA     58.074
+  10 K   CB     32.416
+  11 D   HN      8.614
+  11 D   HA      4.628
+  11 D   N     118.250
+  11 D   CA     54.559
+  11 D   CB     38.095
+  12 K   HN      8.027
+  12 K   HA      4.277
+  12 K   N     121.678
+  12 K   CA     56.437
+  12 K   CB     32.416
+  12 K   C     179.248

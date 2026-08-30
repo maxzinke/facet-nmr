@@ -1,0 +1,54 @@
+REMARK Chemical shift table for BMRB entry 25297
+
+DATA FIRST_RESID 1
+
+DATA SEQUENCE SLGSSPYNDI LGYPALIVIY P
+
+VARS   RESID RESNAME ATOMNAME SHIFT
+FORMAT %4d   %1s     %4s      %8.3f
+
+   2 L   HN      8.056
+   2 L   HA      3.737
+   2 L   CA     55.718
+   4 S   HN      7.675
+   4 S   HA      4.558
+   4 S   CA     55.618
+   5 S   HN      8.171
+   5 S   HA      4.558
+   5 S   CA     56.318
+   7 Y   HN      7.656
+   7 Y   HA      4.533
+   7 Y   CA     54.518
+   8 N   HN      8.524
+   8 N   HA      5.049
+   8 N   CA     51.118
+   9 D   HN      8.888
+   9 D   HA      4.844
+   9 D   CA     49.618
+  10 I   HN      8.230
+  10 I   HA      4.051
+  10 I   CA     61.418
+  11 L   HN      7.283
+  11 L   HA      4.522
+  11 L   CA     52.918
+  13 Y   HN      6.984
+  13 Y   HA      4.833
+  13 Y   CA     54.018
+  15 A   HN      8.566
+  15 A   HA      4.197
+  15 A   CA     50.918
+  16 L   HN      8.202
+  16 L   HA      4.559
+  16 L   CA     53.518
+  17 I   HN      7.656
+  17 I   HA      4.236
+  17 I   CA     59.018
+  18 V   HN      8.329
+  18 V   HA      4.191
+  18 V   CA     59.818
+  19 I   HN      8.058
+  19 I   HA      4.250
+  19 I   CA     58.918
+  20 Y   HN      8.154
+  20 Y   HA      4.770
+  20 Y   CA     53.918

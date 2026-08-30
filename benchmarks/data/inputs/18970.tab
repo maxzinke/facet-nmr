@@ -1,0 +1,67 @@
+REMARK Chemical shift table for BMRB entry 18970
+
+DATA FIRST_RESID 1
+
+DATA SEQUENCE LVRGCWTKSY PPKPCFVR
+
+VARS   RESID RESNAME ATOMNAME SHIFT
+FORMAT %4d   %1s     %4s      %8.3f
+
+   1 L   HA      4.055
+   1 L   CA     54.046
+   1 L   CB     42.306
+   2 V   HN      8.649
+   2 V   HA      4.168
+   2 V   CA     61.926
+   2 V   CB     32.446
+   3 R   HN      8.674
+   3 R   HA      4.404
+   3 R   CA     55.746
+   3 R   CB     30.436
+   5 C   HN      8.044
+   5 C   HA      4.661
+   5 C   CA     56.446
+   5 C   CB     36.936
+   6 W   HN      7.227
+   6 W   HA      5.109
+   6 W   CA     56.126
+   6 W   CB     31.596
+   7 T   HN      9.252
+   7 T   HA      4.330
+   7 T   CA     61.286
+   7 T   CB     69.876
+   8 K   HN      8.466
+   8 K   HA      4.455
+   8 K   CA     55.316
+   9 S   HN      7.508
+   9 S   HA      4.388
+   9 S   CA     57.026
+   9 S   CB     64.581
+  10 Y   HN      8.492
+  10 Y   HA      4.614
+  10 Y   CA     54.996
+  10 Y   CB     39.956
+  11 P   HA      4.292
+  11 P   CA     61.456
+  11 P   CB     32.386
+  12 P   HA      4.327
+  12 P   CA     63.186
+  12 P   CB     32.326
+  13 K   HN      8.209
+  13 K   HA      4.975
+  13 K   CA     52.716
+  15 C   HN      7.860
+  15 C   HA      4.084
+  15 C   CA     54.826
+  15 C   CB     40.531
+  16 F   HN      8.345
+  16 F   HA      4.611
+  16 F   CA     57.116
+  16 F   CB     39.566
+  17 V   HN      8.049
+  17 V   HA      3.988
+  17 V   CA     61.506
+  17 V   CB     32.796
+  18 R   HN      8.345
+  18 R   HA      4.169
+  18 R   CA     55.606

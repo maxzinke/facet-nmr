@@ -1,0 +1,117 @@
+REMARK Chemical shift table for BMRB entry 11095
+
+DATA FIRST_RESID 1
+
+DATA SEQUENCE GSSGSSGLNR DSVPDNHPTK FKVTNVDDEG VELGSGVMEL TQSELVLHLH
+DATA SEQUENCE RREAVRWPYL CLRRYGYDSN LFSFESGRRC QTGQGIFAFK CSRAEEIFNL
+DATA SEQUENCE LQDLMQCNSI NVMEEPVIIT SGSSGSSGSS GSSGLFRLRH FPCGNVNYGY
+DATA SEQUENCE QQQ
+
+VARS   RESID RESNAME ATOMNAME SHIFT
+FORMAT %4d   %1s     %4s      %8.3f
+
+ 135 L   HN      7.671
+ 135 L   HA      4.398
+ 135 L   N     120.371
+ 135 L   CA     54.363
+ 135 L   CB     43.963
+ 135 L   C     176.262
+ 136 F   HN      8.678
+ 136 F   HA      4.316
+ 136 F   N     125.944
+ 136 F   CA     58.676
+ 136 F   CB     41.004
+ 136 F   C     174.743
+ 137 R   HN      7.779
+ 137 R   HA      4.322
+ 137 R   N     128.711
+ 137 R   CA     55.083
+ 137 R   CB     30.365
+ 137 R   C     175.189
+ 138 L   HN      8.626
+ 138 L   HA      4.446
+ 138 L   N     124.097
+ 138 L   CA     54.746
+ 138 L   CB     43.101
+ 138 L   C     177.880
+ 139 R   HN      9.554
+ 139 R   HA      4.070
+ 139 R   N     119.411
+ 139 R   CA     57.405
+ 139 R   CB     31.015
+ 139 R   C     176.462
+ 140 H   HN      7.591
+ 140 H   HA      4.722
+ 140 H   N     115.668
+ 140 H   CA     53.541
+ 140 H   CB     32.990
+ 140 H   C     173.169
+ 141 F   HA      4.285
+ 141 F   CA     56.622
+ 141 F   CB     39.811
+ 142 P   HA      4.359
+ 142 P   CA     64.682
+ 142 P   CB     32.086
+ 142 P   C     175.706
+ 143 C   HN      5.827
+ 143 C   HA      4.568
+ 143 C   N     115.459
+ 143 C   CA     57.898
+ 143 C   CB     31.264
+ 143 C   C     174.100
+ 144 G   HN      9.018
+ 144 G   N     109.477
+ 144 G   CA     45.134
+ 144 G   C     173.414
+ 145 N   HN      7.120
+ 145 N   HA      4.642
+ 145 N   N     118.012
+ 145 N   CA     52.698
+ 145 N   CB     38.924
+ 145 N   C     173.102
+ 146 V   HN      8.090
+ 146 V   HA      4.701
+ 146 V   N     119.708
+ 146 V   CA     60.876
+ 146 V   CB     34.963
+ 146 V   C     174.087
+ 147 N   HN      8.685
+ 147 N   HA      4.822
+ 147 N   N     124.540
+ 147 N   CA     50.335
+ 147 N   CB     41.353
+ 147 N   C     173.745
+ 148 Y   HN      8.575
+ 148 Y   HA      4.547
+ 148 Y   N     118.412
+ 148 Y   CA     58.309
+ 148 Y   CB     40.065
+ 148 Y   C     176.287
+ 149 G   HN      7.912
+ 149 G   N     108.415
+ 149 G   CA     44.169
+ 149 G   C     173.215
+ 150 Y   HN      8.563
+ 150 Y   HA      4.582
+ 150 Y   N     122.429
+ 150 Y   CA     58.062
+ 150 Y   CB     38.946
+ 150 Y   C     176.337
+ 151 Q   HN      8.592
+ 151 Q   HA      4.349
+ 151 Q   N     121.410
+ 151 Q   CA     56.054
+ 151 Q   CB     29.476
+ 151 Q   C     175.730
+ 152 Q   HN      8.460
+ 152 Q   HA      4.388
+ 152 Q   N     121.812
+ 152 Q   CA     55.700
+ 152 Q   CB     29.514
+ 152 Q   C     175.001
+ 153 Q   HN      8.082
+ 153 Q   HA      4.182
+ 153 Q   N     126.492
+ 153 Q   CA     57.316
+ 153 Q   CB     30.242
+ 153 Q   C     180.509

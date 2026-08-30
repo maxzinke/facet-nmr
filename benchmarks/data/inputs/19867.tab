@@ -1,0 +1,85 @@
+REMARK Chemical shift table for BMRB entry 19867
+
+DATA FIRST_RESID 1
+
+DATA SEQUENCE MPKSKVRKKN DFTVSAVSRT PMKVKVGPSS VWFVSLFIGL MLIGLIWLMV
+DATA SEQUENCE FQLAAIGSQA PTALNWMAQL GPWNYAIAFA FMITGLLLTM RWHLEHHHHH
+DATA SEQUENCE H
+
+VARS   RESID RESNAME ATOMNAME SHIFT
+FORMAT %4d   %1s     %4s      %8.3f
+
+  39 G   N     108.000
+  39 G   CA     46.172
+  39 G   C     173.182
+  40 L   N     122.000
+  40 L   CA     57.432
+  40 L   CB     40.792
+  40 L   C     177.382
+  41 M   N     121.000
+  41 M   CA     57.942
+  41 M   CB     32.232
+  41 M   C     177.582
+  42 L   N     121.000
+  42 L   CA     57.302
+  42 L   CB     40.582
+  42 L   C     177.382
+  43 I   N     117.000
+  43 I   CA     63.152
+  43 I   CB     35.942
+  43 I   C     176.182
+  48 L   N     121.500
+  48 L   CA     57.432
+  48 L   CB     41.202
+  48 L   C     177.582
+  49 M   N     120.300
+  49 M   CA     60.272
+  49 M   CB     33.302
+  49 M   C     176.882
+  50 V   N     118.000
+  50 V   CA     65.372
+  50 V   CB     30.872
+  50 V   C     175.982
+  75 Y   N     118.000
+  75 Y   CA     54.402
+  75 Y   CB     36.682
+  75 Y   C     176.182
+  76 A   N     123.000
+  76 A   CA     54.712
+  76 A   CB     16.642
+  76 A   C     176.682
+  77 I   N     120.000
+  77 I   CA     65.472
+  77 I   CB     37.102
+  77 I   C     176.882
+  78 A   N     122.000
+  78 A   CA     51.972
+  78 A   CB     17.592
+  78 A   C     176.482
+  79 F   N     119.000
+  79 F   CA     60.482
+  79 F   CB     37.312
+  79 F   C     176.582
+  80 A   N     121.000
+  80 A   CA     54.082
+  80 A   CB     16.952
+  80 A   C     177.182
+  81 F   N     118.000
+  81 F   CA     56.512
+  81 F   CB     38.262
+  81 F   C     174.382
+  82 M   N     123.000
+  82 M   CA     59.142
+  82 M   CB     32.562
+  82 M   C     176.782
+  83 I   N     119.000
+  83 I   CA     65.552
+  83 I   CB     37.932
+  83 I   C     176.582
+  84 T   N     113.000
+  84 T   CA     61.312
+  84 T   CB     66.742
+  84 T   C     173.482
+  85 G   N     109.000
+  85 G   CA     46.582
+  85 G   C     175.382

@@ -1,0 +1,50 @@
+REMARK Chemical shift table for BMRB entry 18184
+
+DATA FIRST_RESID 1
+
+DATA SEQUENCE MAAVAGLYGL GEDRQHRKKQ
+
+VARS   RESID RESNAME ATOMNAME SHIFT
+FORMAT %4d   %1s     %4s      %8.3f
+
+   2 A   N     123.400
+   2 A   CA     51.200
+   2 A   CB     23.500
+   2 A   C     175.400
+   3 A   N     120.700
+   3 A   CA     51.100
+   3 A   CB     23.600
+   3 A   C     175.400
+   4 V   N     115.800
+   4 V   CA     59.500
+   4 V   CB     35.900
+   4 V   C     172.600
+   5 A   N     124.100
+   5 A   CA     51.200
+   5 A   CB     23.600
+   5 A   C     176.000
+   6 G   N     106.400
+   6 G   CA     47.200
+   6 G   C     169.700
+   7 L   N     116.100
+   7 L   CA     52.900
+   7 L   CB     46.800
+   7 L   C     173.400
+   8 Y   N     116.200
+   8 Y   CA     55.700
+   8 Y   CB     46.800
+   8 Y   C     175.200
+   9 G   N     104.500
+   9 G   CA     46.000
+   9 G   C     170.500
+  10 L   N     119.500
+  10 L   CA     54.700
+  10 L   CB     45.700
+  10 L   C     175.300
+  11 G   N     104.900
+  11 G   CA     46.100
+  11 G   C     170.600
+  12 E   N     122.400
+  12 E   CA     54.600
+  12 E   CB     29.800
+  12 E   C     171.700

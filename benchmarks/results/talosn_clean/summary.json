@@ -1,0 +1,22 @@
+{
+  "checkpoint": "facet_v3.pt (sha256 72efc688\u2026)",
+  "index": "facet_retrieval_index.npz (index_version v0.2.1)",
+  "k": 25,
+  "dbscan_eps_deg": 30.0,
+  "dbscan_min_size": 3,
+  "n_rows": 55036,
+  "n_facet_emit": 54610,
+  "n_tn_emit": 54260,
+  "n_both": 53841,
+  "overall_facet_median": 12.650635292631266,
+  "overall_tn_median": 13.56693350301656,
+  "tier_counts": {
+    "Strong": 42039,
+    "Generous": 10099,
+    "Ambiguous": 2056,
+    "None": 842
+  },
+  "error_metric": "sqrt((dphi^2 + dpsi^2) / 2), each delta wrapped to [0, 180] degrees",
+  "ground_truth": "ensemble-mean phi/psi over well_defined residues (crystalline_all_phipsi_ensemble)",
+  "talosn_version": "TALOS-N Version 4.21 Rev 2016.343.11.31"
+}

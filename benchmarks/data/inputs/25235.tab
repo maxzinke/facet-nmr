@@ -1,0 +1,26 @@
+REMARK Chemical shift table for BMRB entry 25235
+
+DATA FIRST_RESID 1
+
+DATA SEQUENCE MASESNGRKV DYSTFLQEVN NDQVREARIN GREINVTKKD SNRYTTYIPV
+DATA SEQUENCE QDPKLLDNLL TKNVKVVGEP PEEPLEHHHH HH
+
+VARS   RESID RESNAME ATOMNAME SHIFT
+FORMAT %4d   %1s     %4s      %8.3f
+
+  26 E   HN      8.200
+  26 E   HA      5.300
+  26 E   N     119.260
+  26 E   CA     54.620
+  26 E   CB     34.810
+  26 E   C     172.420
+  42 N   HN      8.420
+  42 N   HA      4.640
+  42 N   N     121.320
+  42 N   CA     54.910
+  42 N   CB     39.420
+  42 N   C     174.040
+  71 P   HA      4.370
+  71 P   CA     62.760
+  71 P   CB     31.720
+  71 P   C     176.520

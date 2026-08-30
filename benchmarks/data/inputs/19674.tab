@@ -1,0 +1,58 @@
+REMARK Chemical shift table for BMRB entry 19674
+
+DATA FIRST_RESID 1
+
+DATA SEQUENCE RLVPSGPNPL HN
+
+VARS   RESID RESNAME ATOMNAME SHIFT
+FORMAT %4d   %1s     %4s      %8.3f
+
+   1 R   HN      7.190
+   1 R   HA      4.015
+   1 R   N     124.177
+   1 R   CA     55.387
+   1 R   CB     30.970
+   2 L   HN      8.184
+   2 L   HA      4.242
+   2 L   N     120.848
+   2 L   CA     55.178
+   2 L   CB     42.217
+   3 V   HN      8.387
+   3 V   HA      4.410
+   3 V   N     124.469
+   3 V   CA     59.827
+   3 V   CB     32.719
+   4 P   HA      4.375
+   4 P   CA     63.493
+   4 P   CB     32.186
+   5 S   HN      8.408
+   5 S   HA      4.449
+   5 S   N     116.475
+   5 S   CA     58.367
+   5 S   CB     64.128
+   6 G   HN      8.227
+   6 G   N     110.710
+   6 G   CA     44.603
+   7 P   HA      4.402
+   7 P   CA     63.244
+   7 P   CB     32.212
+   8 N   HN      8.538
+   8 N   HA      4.923
+   8 N   N     120.140
+   8 N   CA     51.392
+   8 N   CB     38.826
+  10 L   HN      8.696
+  10 L   HA      4.425
+  10 L   N     105.649
+  10 L   CA     55.175
+  10 L   CB     42.355
+  11 H   HN      8.213
+  11 H   HA      4.678
+  11 H   N     118.257
+  11 H   CA     54.573
+  11 H   CB     29.172
+  12 N   HN      8.302
+  12 N   HA      4.600
+  12 N   N     123.707
+  12 N   CA     53.446
+  12 N   CB     39.496

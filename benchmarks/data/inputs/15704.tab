@@ -1,0 +1,32 @@
+REMARK Chemical shift table for BMRB entry 15704
+
+DATA FIRST_RESID 1
+
+DATA SEQUENCE KKAVWHKLLS KQGSELETAM ETLINVFHAH SGKEGDKYKL SKKELKDLLQ
+DATA SEQUENCE TELSSFLDVQ KDADAVDKIM KELDENGDGE VDFQEFVVLV AALTVACNNF
+DATA SEQUENCE FWENS
+
+VARS   RESID RESNAME ATOMNAME SHIFT
+FORMAT %4d   %1s     %4s      %8.3f
+
+   4 V   HN      7.930
+   4 V   HA      4.040
+   4 V   N     119.600
+   7 K   HN      7.560
+   7 K   HA      3.870
+   7 K   N     122.000
+   8 L   HN      7.620
+   8 L   HA      3.910
+   8 L   N     119.300
+   9 L   HN      7.810
+   9 L   HA      3.860
+   9 L   N     120.900
+  10 S   HN      7.840
+  10 S   HA      4.440
+  10 S   N     116.300
+  11 K   HN      7.600
+  11 K   HA      4.180
+  11 K   N     120.300
+  12 Q   HN      7.840
+  12 Q   HA      4.280
+  12 Q   N     127.300

@@ -1,0 +1,77 @@
+REMARK Chemical shift table for BMRB entry 30179
+
+DATA FIRST_RESID 1
+
+DATA SEQUENCE GEXXLAXKAA XFARXLANYX
+
+VARS   RESID RESNAME ATOMNAME SHIFT
+FORMAT %4d   %1s     %4s      %8.3f
+
+   2 E   HA      4.000
+   2 E   CA     58.731
+   2 E   CB     28.117
+   5 L   HN      7.637
+   5 L   HA      4.088
+   5 L   N     119.350
+   5 L   CA     56.433
+   5 L   CB     39.931
+   6 A   HN      8.033
+   6 A   HA      4.177
+   6 A   N     124.830
+   6 A   CA     53.929
+   6 A   CB     16.408
+   6 A   C     179.973
+   8 K   HN      7.962
+   8 K   HA      4.236
+   8 K   N     120.170
+   8 K   CA     57.229
+   8 K   CB     30.192
+   9 A   HN      8.175
+   9 A   HA      4.286
+   9 A   N     122.050
+   9 A   CA     53.802
+   9 A   CB     16.473
+   9 A   C     179.253
+  10 A   HN      8.175
+  10 A   HA      4.255
+  10 A   N     122.740
+  10 A   CA     53.404
+  10 A   CB     16.473
+  10 A   C     179.253
+  12 F   HN      8.458
+  12 F   HA      4.427
+  12 F   N     122.370
+  12 F   CA     58.583
+  12 F   CB     37.003
+  13 A   HN      7.730
+  13 A   HA      4.016
+  13 A   N     119.040
+  13 A   CA     53.586
+  13 A   CB     16.455
+  13 A   C     180.303
+  14 R   HN      7.928
+  14 R   HA      3.937
+  14 R   N     121.430
+  14 R   CA     58.300
+  14 R   CB     29.118
+  16 L   HN      7.945
+  16 L   HA      4.011
+  16 L   N     120.200
+  16 L   CA     55.752
+  16 L   CB     40.612
+  17 A   HN      7.681
+  17 A   HA      4.169
+  17 A   N     120.810
+  17 A   CA     51.975
+  17 A   CB     16.833
+  17 A   C     177.013
+  18 N   HN      7.732
+  18 N   HA      4.621
+  18 N   N     115.940
+  18 N   CA     52.403
+  18 N   CB     37.596
+  19 Y   HN      7.769
+  19 Y   HA      4.451
+  19 Y   N     120.690
+  19 Y   CA     57.103
+  19 Y   CB     37.206

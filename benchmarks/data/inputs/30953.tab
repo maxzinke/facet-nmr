@@ -1,0 +1,87 @@
+REMARK Chemical shift table for BMRB entry 30953
+
+DATA FIRST_RESID 1
+
+DATA SEQUENCE CCNCSSKWCR DHSRCCX
+
+VARS   RESID RESNAME ATOMNAME SHIFT
+FORMAT %4d   %1s     %4s      %8.3f
+
+   1 C   HA      4.479
+   1 C   CA     52.701
+   1 C   CB     43.757
+   2 C   HN      8.922
+   2 C   HA      5.045
+   2 C   N     116.658
+   2 C   CA     53.695
+   2 C   CB     40.264
+   3 N   HN      7.269
+   3 N   HA      4.911
+   3 N   N     123.931
+   3 N   CA     50.379
+   3 N   CB     35.455
+   4 C   HN      8.559
+   4 C   HA      4.366
+   4 C   N     120.706
+   4 C   CA     53.836
+   4 C   CB     34.117
+   5 S   HN      8.012
+   5 S   HA      4.351
+   5 S   N     114.813
+   5 S   CA     58.040
+   5 S   CB     61.542
+   6 S   HN      7.666
+   6 S   HA      4.617
+   6 S   N     116.926
+   6 S   CA     54.452
+   6 S   CB     62.125
+   7 K   HN      9.009
+   7 K   HA      3.699
+   7 K   N     130.642
+   7 K   CA     58.111
+   7 K   CB     30.836
+   8 W   HN      8.112
+   8 W   HA      4.339
+   8 W   N     117.307
+   8 W   CA     58.372
+   8 W   CB     27.579
+   9 C   HN      7.460
+   9 C   HA      4.400
+   9 C   N     115.537
+   9 C   CA     55.367
+   9 C   CB     38.797
+  10 R   HN      8.036
+  10 R   HA      3.882
+  10 R   N     119.191
+  10 R   CA     57.611
+  10 R   CB     28.802
+  11 D   HN      7.973
+  11 D   HA      4.342
+  11 D   N     115.508
+  11 D   CA     59.354
+  11 D   CB     37.743
+  12 H   HN      7.546
+  12 H   HA      4.592
+  12 H   N     113.934
+  12 H   CA     54.680
+  12 H   CB     27.812
+  13 S   HN      7.943
+  13 S   HA      4.789
+  13 S   N     115.048
+  13 S   CA     56.606
+  13 S   CB     63.727
+  14 R   HN      8.911
+  14 R   HA      4.182
+  14 R   N     126.139
+  14 R   CA     56.346
+  14 R   CB     28.055
+  15 C   HN      8.165
+  15 C   HA      4.445
+  15 C   N     115.156
+  15 C   CA     55.819
+  15 C   CB     39.931
+  16 C   HN      7.698
+  16 C   HA      4.926
+  16 C   N     117.567
+  16 C   CA     52.273
+  16 C   CB     38.886

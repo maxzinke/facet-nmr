@@ -1,0 +1,72 @@
+REMARK Chemical shift table for BMRB entry 6260
+
+DATA FIRST_RESID 1
+
+DATA SEQUENCE EIAALEKEIA ALEKEIAALE KKIAALKEKI AALKEKIAAL KE
+
+VARS   RESID RESNAME ATOMNAME SHIFT
+FORMAT %4d   %1s     %4s      %8.3f
+
+   1 E   HN      8.525
+   1 E   HA      4.221
+   1 E   N     127.040
+   2 I   HN      8.170
+   2 I   HA      3.953
+   2 I   N     119.971
+   3 A   HN      8.085
+   3 A   HA      4.260
+   3 A   N     123.043
+   4 A   HN      7.887
+   4 A   HA      4.187
+   4 A   N     120.598
+   5 L   HN      8.207
+   5 L   HA      4.184
+   5 L   N     121.626
+   6 E   HN      8.786
+   6 E   HA      3.887
+   6 E   N     118.245
+   7 K   HN      7.770
+   7 K   HA      4.113
+   7 K   N     118.720
+   8 E   HN      7.911
+   8 E   HA      4.184
+   8 E   N     120.581
+   9 I   HN      8.554
+   9 I   HA      3.689
+   9 I   N     119.874
+  10 A   HN      8.086
+  10 A   HA      4.260
+  10 A   N     121.327
+  11 A   HN      7.858
+  11 A   HA      4.198
+  11 A   N     118.591
+  12 L   HN      7.954
+  12 L   HA      4.205
+  12 L   N     120.643
+  13 E   HN      8.529
+  13 E   HA      3.895
+  13 E   N     117.927
+  14 K   HN      7.791
+  14 K   HA      4.121
+  14 K   N     118.630
+  15 E   HN      7.945
+  15 E   HA      4.198
+  15 E   N     121.077
+  16 I   HN      8.557
+  16 I   HA      3.687
+  16 I   N     119.874
+  17 A   HN      8.120
+  17 A   HA      4.181
+  17 A   N     121.424
+  18 A   HN      7.739
+  18 A   HA      4.186
+  18 A   N     119.388
+  19 L   HN      7.980
+  19 L   HA      4.182
+  19 L   N     119.903
+  20 E   HN      8.260
+  20 E   HA      4.124
+  20 E   N     118.263
+  21 K   HN      7.806
+  21 K   HA      4.235
+  21 K   N     119.269

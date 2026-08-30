@@ -101,7 +101,7 @@ ASSETS: dict[str, Asset] = {
 #: Override with ``$FACET_ASSET_URL`` to mirror internally — the path layout is simply
 #: ``<BASE_URL>/<filename>``.
 HF_REPO = os.environ.get("FACET_ASSET_REPO", "SiXa18/facet-weights")
-HF_REVISION = os.environ.get("FACET_ASSET_REVISION", "v0.3.1")
+HF_REVISION = os.environ.get("FACET_ASSET_REVISION", "v0.4.0")
 BASE_URL = os.environ.get(
     "FACET_ASSET_URL",
     f"https://huggingface.co/{HF_REPO}/resolve/{HF_REVISION}",
@@ -122,7 +122,10 @@ def _env_override(name: str) -> Optional[Path]:
         "facet_retrieval_index.npz": "FACET_INDEX",
         "facet_v3.pt": "FACET_CHECKPOINT",
     }
-    for var in (legacy.get(name), "FACET_" + name.upper().replace(".", "_").replace("-", "_")):
+    derived = name.upper().replace(".", "_").replace("-", "_")
+    if derived.startswith("FACET_"):
+        derived = derived[len("FACET_"):]
+    for var in (legacy.get(name), "FACET_" + derived):
         if var and os.environ.get(var):
             return Path(os.environ[var])
     return None

@@ -32,6 +32,8 @@ def main(argv: list[str] | None = None) -> None:
         prog="facet",
         description="FACET: Predict backbone torsion angles from NMR chemical shifts",
     )
+    from . import __version__
+    parser.add_argument("--version", action="version", version=f"facet-nmr {__version__}")
     sub = parser.add_subparsers(dest="command")
 
     # ── predict ──
@@ -57,10 +59,16 @@ def main(argv: list[str] | None = None) -> None:
              "Default: protonated (no correction). Use perdeut-exchanged for "
              "a standard perdeuterated sample with amide back-exchange.",
     )
+    pred.add_argument("--mask-safe-fallback", action="store_true",
+                      help="Route residues that lack an HA shift to the mask-aware "
+                           "shift-retrieval fallback instead of the default "
+                           "embedding retrieval. Off by default: on the real "
+                           "benchmark the default path is more accurate even on "
+                           "proteins with no HA at all (see docs/BENCHMARKS.md).")
     pred.add_argument("--include-medium", action="store_true",
                       help="Include Medium-tier residues in restraint files "
-                           "(adds ~47%% of residues at 16.5 deg median, 38%% "
-                           "fail25 — bringing coverage to ~98%%). Use cautiously.")
+                           "(adds ~18%% of residues at 24.5 deg median, 49%% "
+                           "fail25 — bringing coverage to ~95%%). Use cautiously.")
     pred.add_argument("--include-all", action="store_true",
                       help="Include all residues in restraint files "
                            "regardless of tier (Low + Flexible included — "
@@ -117,6 +125,7 @@ def _cmd_predict(args) -> None:
         checkpoint=args.checkpoint,
         device=args.device,
         deuteration=args.deuteration,
+        mask_safe_fallback=args.mask_safe_fallback,
     )
 
     n_accepted = len(result.accepted(include_medium=args.include_medium))

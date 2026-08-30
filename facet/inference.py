@@ -8,12 +8,15 @@ Public API::
 """
 from __future__ import annotations
 
+import logging
 import math
 from functools import lru_cache
 from pathlib import Path
 
 import numpy as np
 import torch
+
+logger = logging.getLogger("facet")
 
 
 # Physical ranges for backbone chemical shifts (in ppm)
@@ -272,7 +275,7 @@ def predict(
     retrieval_k: int = 25,
     auto_reference: bool = False,
     structural_beta: float = 15.0,
-    mask_safe_fallback: bool = True,
+    mask_safe_fallback: bool = False,
 ) -> FACETResult:
     """Predict backbone torsion angles from chemical shifts.
 
@@ -305,7 +308,6 @@ def predict(
         carries basin_populations and alt_clusters.
     """
     import logging
-    logger = logging.getLogger("facet")
 
     # Load shift list
     if isinstance(input_, ShiftList):
@@ -691,13 +693,15 @@ def predict(
             all_phi[start:end] = np.degrees(out["phi"].cpu().numpy())
             all_psi[start:end] = np.degrees(out["psi"].cpu().numpy())
 
-    # ── Mask-safe shift-retrieval fallback for HA-missing residues ──
-    # The parametric phi/psi head (and the embedding retrieval, which uses the
-    # same encoder) collapse toward ~0 deg when HA is absent — the model was
-    # trained never to lose H/HA. For those residues, predict phi/psi via
-    # mask-aware shift retrieval, whose distance drops the missing atom instead
-    # of collapsing. Validated to recover ~18 deg median error vs ~53 deg for
-    # the parametric head on held-out perdeuterated-style inputs.
+    # ── Mask-safe shift-retrieval fallback for HA-missing residues (opt-in) ──
+    # Predicts phi/psi for HA-missing residues by mask-aware kNN over a
+    # secondary-shift reference whose distance drops the missing atom. On
+    # synthetically HA-stripped queries it beats the parametric head by a wide
+    # margin (docs/BENCHMARKS.md, ablation), but on the real 745-protein
+    # benchmark — including the 49 proteins with no HA at all — the default
+    # embedding-retrieval path is already better (9.6 deg median vs 10.7 deg
+    # with the fallback; High-tier share 65 % vs 38 %), so the fallback is
+    # off by default. See docs/BENCHMARKS.md section 6.
     if mask_safe_fallback:
         ha_missing = masks[:, 1] < 0.5
         n_missing = int(ha_missing.sum())

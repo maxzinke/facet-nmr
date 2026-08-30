@@ -2,10 +2,11 @@
 
 Architecture:
   - Input: secondary shifts (6) + masks (6) + AA embedding (32) + flags (6) = 50 per residue
-  - Encoder: 3 dilated conv1d layers (receptive field ±4) → 2 RoPE self-attention layers
+  - Encoder: 3 dilated conv1d layers (kernel 5, dilations 1/2/4: receptive field ±14,
+    i.e. the whole window) → 2 RoPE self-attention layers
   - Heads: coarse-to-fine Ramachandran (36×36 grid + circular residual),
            SS (H/E/C) with soft conditioning, order/disorder, angle auxiliary
-  - ~1.5M parameters
+  - 1,293,378 parameters (production configuration; see docs/METHOD.md)
 
 Designed for extension:
   - Phase 2: retrieval tokens via cross-attention (add retrieval_tokens input to encoder)

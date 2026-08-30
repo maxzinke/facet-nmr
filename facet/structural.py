@@ -17,9 +17,9 @@ index, using the learned embedding as a non-parametric likelihood::
 Where:
   - i runs over all training residues in the retrieval index (~220K).
   - stateᵢ ∈ {H, E, P, C}:
-      H if DSSPᵢ = H  (canonical α-helix)
-      E if DSSPᵢ = E  (canonical β-strand)
-      P if DSSPᵢ = C (loop) AND basinᵢ = PPII — matches d2D's PPII defn
+      H if SSᵢ = H  (helix, from the deposited PDB secondary-structure records)
+      E if SSᵢ = E  (strand)
+      P if SSᵢ = C (loop) AND basinᵢ = PPII — matches d2D's PPII defn
       C otherwise (loop not in PPII region)
   - β is a softmax temperature hyperparameter (default 15).
 
@@ -53,10 +53,11 @@ STATE_NAMES = ("helix", "beta", "ppii", "coil")
 
 
 def _derive_state_labels(ss: np.ndarray, basin: np.ndarray) -> np.ndarray:
-    """Map (DSSP 3-state, basin 4-state) index labels to d2D's 4-state.
+    """Map (3-state SS, basin 4-state) index labels to d2D's 4-state.
 
     Args:
-        ss: int array of DSSP labels (0=H, 1=E, 2=C).
+        ss: int array of 3-state SS labels (0=H, 1=E, 2=C), from the PDB
+            secondary-structure records of the reference structure.
         basin: int array of Ramachandran basin labels (0=α_R, 1=β,
             2=PPII, 3=other).
 
@@ -67,7 +68,7 @@ def _derive_state_labels(ss: np.ndarray, basin: np.ndarray) -> np.ndarray:
     state = np.full_like(ss, STATE_COIL, dtype=np.int8)
     state[ss == 0] = STATE_HELIX
     state[ss == 1] = STATE_BETA
-    # DSSP C (loop) further split: PPII-region residues → PPII, else → Coil.
+    # Loop (C) further split: PPII-region residues → PPII, else → Coil.
     loop_mask = (ss == 2)
     ppii_mask = loop_mask & (basin == 2)
     state[ppii_mask] = STATE_PPII

@@ -7,14 +7,10 @@ reference index of secondary-shift triplets: the distance intersects the query
 and reference masks and normalizes by the shared-atom count, so an absent atom
 simply drops out of the match instead of poisoning it.
 
-Pure NumPy, no torch — self-contained so it can be dropped into the external
-`facet` package and the HF Space unchanged. Faithful to the validated
-HierarchicalDatabase merged-query (Tier A) path; the same code builds the
-index and queries it, so build and query conversions are identical by
-construction.
+Pure NumPy, no torch. The same code builds the reference index and queries it,
+so build and query conversions are identical by construction.
 
-Ships with ``facet_shift_reference.npz``. Build it via
-``scripts/build_facet_shift_reference.py``.
+Uses ``facet_shift_reference.npz`` (see DATA_PROVENANCE.md and docs/METHOD.md).
 """
 from __future__ import annotations
 
@@ -24,10 +20,10 @@ from typing import Any
 
 import numpy as np
 
-# Crystalline atom order: H=0, HA=1, N=2, CA=3, CB=4, C=5
+# Backbone atom order used throughout the reference file: H=0, HA=1, N=2, CA=3, CB=4, C=5
 BACKBONE_ATOMS: tuple[str, ...] = ("H", "HA", "N", "CA", "CB", "C")
 
-# 0-indexed AA map (matches crystalline_fid.crystalline.data.features.AA_TO_INDEX)
+# 0-indexed amino-acid map (alphabetical by three-letter code; matches the reference file)
 AA_ORDER = [
     "ALA", "ARG", "ASN", "ASP", "CYS", "GLN", "GLU", "GLY",
     "HIS", "ILE", "LEU", "LYS", "MET", "PHE", "PRO", "SER",
@@ -36,8 +32,8 @@ AA_ORDER = [
 AA_TO_INDEX = {aa: i for i, aa in enumerate(AA_ORDER)}
 
 # Consensus random-coil shifts (ppm), used to convert observed shifts to secondary
-# shifts. Static branch of
-# crystalline_fid.crystalline.baselines.database_lookup._to_secondary_shifts.
+# shifts. The same table was used to build ``facet_shift_reference.npz``, so build
+# and query conversions are identical by construction.
 #
 # Values follow the standard random-coil references:
 #   Wishart, D. S., Bigam, C. G., Holm, A., Hodges, R. S. & Sykes, B. D.

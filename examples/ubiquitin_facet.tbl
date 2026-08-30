@@ -1,43 +1,43 @@
 ! FACET dihedral restraints — 6 residues
 
+assign (resid 2 and name C)  (resid 3 and name N)
+       (resid 3 and name CA) (resid 3 and name C)  1.0   -67.2  25.7 2
+! PHI 3 ILE (High)
+assign (resid 3 and name N)  (resid 3 and name CA)
+       (resid 3 and name C)  (resid 4 and name N)  1.0   -35.0  16.1 2
+! PSI 3 ILE (High)
+
+assign (resid 3 and name C)  (resid 4 and name N)
+       (resid 4 and name CA) (resid 4 and name C)  1.0   -69.5  22.2 2
+! PHI 4 PHE (High)
+assign (resid 4 and name N)  (resid 4 and name CA)
+       (resid 4 and name C)  (resid 5 and name N)  1.0   -40.2  24.4 2
+! PSI 4 PHE (High)
+
 assign (resid 4 and name C)  (resid 5 and name N)
-       (resid 5 and name CA) (resid 5 and name C)  1.0   -65.1  16.0
-! PHI 5 VAL (Strong)
+       (resid 5 and name CA) (resid 5 and name C)  1.0   -69.1  23.2 2
+! PHI 5 VAL (High)
 assign (resid 5 and name N)  (resid 5 and name CA)
-       (resid 5 and name C)  (resid 6 and name N)  1.0   -34.9  16.0
-! PSI 5 VAL (Strong)
+       (resid 5 and name C)  (resid 6 and name N)  1.0   -35.4  20.9 2
+! PSI 5 VAL (High)
 
 assign (resid 5 and name C)  (resid 6 and name N)
-       (resid 6 and name CA) (resid 6 and name C)  1.0   -65.1  16.0
-! PHI 6 LYS (Strong)
+       (resid 6 and name CA) (resid 6 and name C)  1.0   -65.0  12.5 2
+! PHI 6 LYS (High)
 assign (resid 6 and name N)  (resid 6 and name CA)
-       (resid 6 and name C)  (resid 7 and name N)  1.0   -35.2  16.0
-! PSI 6 LYS (Strong)
-
-assign (resid 6 and name C)  (resid 7 and name N)
-       (resid 7 and name CA) (resid 7 and name C)  1.0   -65.0  16.0
-! PHI 7 THR (Strong)
-assign (resid 7 and name N)  (resid 7 and name CA)
-       (resid 7 and name C)  (resid 8 and name N)  1.0   -35.0  16.0
-! PSI 7 THR (Strong)
+       (resid 6 and name C)  (resid 7 and name N)  1.0   -35.3  13.4 2
+! PSI 6 LYS (High)
 
 assign (resid 7 and name C)  (resid 8 and name N)
-       (resid 8 and name CA) (resid 8 and name C)  1.0   -65.2  16.0
-! PHI 8 LEU (Strong)
+       (resid 8 and name CA) (resid 8 and name C)  1.0   -61.3  20.5 2
+! PHI 8 LEU (High)
 assign (resid 8 and name N)  (resid 8 and name CA)
-       (resid 8 and name C)  (resid 9 and name N)  1.0   -45.1  16.0
-! PSI 8 LEU (Strong)
+       (resid 8 and name C)  (resid 9 and name N)  1.0   -44.9  23.7 2
+! PSI 8 LEU (High)
 
 assign (resid 8 and name C)  (resid 9 and name N)
-       (resid 9 and name CA) (resid 9 and name C)  1.0   -65.1  16.0
-! PHI 9 THR (Strong)
+       (resid 9 and name CA) (resid 9 and name C)  1.0   -66.3  20.6 2
+! PHI 9 THR (High)
 assign (resid 9 and name N)  (resid 9 and name CA)
-       (resid 9 and name C)  (resid 10 and name N)  1.0   -35.2  16.0
-! PSI 9 THR (Strong)
-
-assign (resid 9 and name C)  (resid 10 and name N)
-       (resid 10 and name CA) (resid 10 and name C)  1.0   -65.0  22.0
-! PHI 10 GLY (Good)
-assign (resid 10 and name N)  (resid 10 and name CA)
-       (resid 10 and name C)  (resid 11 and name N)  1.0   -45.1  22.0
-! PSI 10 GLY (Good)
+       (resid 9 and name C)  (resid 10 and name N)  1.0   -33.4  20.2 2
+! PSI 9 THR (High)

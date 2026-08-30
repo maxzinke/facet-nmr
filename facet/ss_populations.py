@@ -68,7 +68,7 @@ def _load_params() -> _GaussianParams:
     if not _PARAMS_PATH.exists():
         raise FileNotFoundError(
             f"SS-population parameter file not found at {_PARAMS_PATH}. "
-            "Run scripts/fit_ss_populations.py in the noft repo to generate it."
+            "The file ships with the package under facet/data/; reinstall the package."
         )
     data = np.load(_PARAMS_PATH, allow_pickle=True)
     # Backward-compat: accept parameter files fit before task #3 (no context).

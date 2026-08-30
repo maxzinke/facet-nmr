@@ -28,10 +28,11 @@ AA_THREE_TO_ONE = {v: k for k, v in AA_ONE_TO_THREE.items()}
 #   * Retrieval off: derived from the entropy of the coarse Ramachandran head.
 #
 # Calibrated numbers on the 745-protein clean benchmark (retrieval mode):
-#   High     — 50.5% of residues, 9.6 deg median, 14.5% fail25  (restraint-quality)
-#   Medium   — 47.5% of residues, 16.5 deg median, 38.2% fail25 (cautious use)
-#   Low      —  1.7% of residues, 73.8 deg median, 76.5% fail25 (multi-modal)
-#   Flexible —  0.3% of residues                                (disordered / no cluster)
+#   High     — 76.4% of residues, 10.6 deg median, 19.6% fail25  (restraint-quality)
+#   Medium   — 18.3% of residues, 24.5 deg median, 49.3% fail25 (cautious use)
+#   Low      —  3.7% of residues, 65.0 deg median, 71.0% fail25 (multi-modal)
+#   Flexible —  0.8% of residues                                (disordered / no cluster)
+# Source: benchmarks/results/talosn_clean (53,841 residues); see docs/BENCHMARKS.md.
 #
 # Flexible is not a failure state — it flags residues where neighbor shifts
 # disagree, i.e. the chemical shifts are consistent with conformational
@@ -183,17 +184,17 @@ class FACETResult:
     def high(self) -> list[ResiduePrediction]:
         """Residues in the High tier — restraint-quality.
 
-        In retrieval mode: 9.6 deg median / 14.5% fail25 / ~50% of residues.
+        In retrieval mode: 10.6 deg median / 19.6% fail25 / ~76% of residues.
         """
         return [r for r in self.residues if r.confidence_class == CONF_HIGH]
 
     def accepted(self, include_medium: bool = False) -> list[ResiduePrediction]:
         """Residues to include in restraint files.
 
-        Default: High tier only (9.6 deg / 14.5% fail25). This is the
+        Default: High tier only (10.6 deg / 19.6% fail25). This is the
         restraint-quality set — directly usable for XPLOR / CYANA / HADDOCK.
 
-        ``include_medium=True`` adds the Medium tier (16.5 deg / 38% fail25),
+        ``include_medium=True`` adds the Medium tier (24.5 deg / 49% fail25),
         bringing coverage to ~98% of residues. Use with caution — Medium-tier
         residues fail more often and widen the restraint bounds.
         """

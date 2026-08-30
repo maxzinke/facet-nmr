@@ -18,6 +18,7 @@ from __future__ import annotations
 import json as json_mod
 from pathlib import Path
 
+from .. import __version__
 from .formats import (
     CONF_HIGH,
     CONF_MEDIUM,
@@ -120,7 +121,9 @@ def write_aco(
 
     residues = result.accepted(include_medium=include_medium) if accepted_only else result.residues
 
-    lines = ["# FACET torsion angle restraints"]
+    lines = ["# FACET torsion angle restraints",
+             f"# facet-nmr {__version__}"
+             + (f" | retrieval index {result.index_version}" if result.index_version else "")]
     lines.append(f"# {len(residues)} residues")
     lines.append("")
 
@@ -286,7 +289,9 @@ def write_predtab(
 
     lines = [
         "REMARK FACET backbone torsion angle prediction",
-        "REMARK https://github.com/bluegems661/facet-nmr",
+        f"REMARK facet-nmr {__version__}"
+        + (f" | retrieval index {result.index_version}" if result.index_version else ""),
+        "REMARK https://github.com/maxzinke/facet-nmr",
         "",
         "VARS   RESID RESNAME PHI PSI DPHI DPSI SS CHI1 CLASS",
         "FORMAT %4d %s %8.1f %8.1f %6.1f %6.1f %s %s %s",
@@ -408,6 +413,7 @@ def write_json(
 
     data = {
         "source": result.source,
+        "facet_version": __version__,
         "n_residues": result.n_residues,
         "index_version": result.index_version,
         "deuteration_preset": result.deuteration_preset,

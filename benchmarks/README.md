@@ -69,44 +69,38 @@ for 99.2 % of them and TALOS-N for 98.6 %; all head-to-head numbers are computed
 
 ## The result
 
-`python benchmarks/rescore.py` prints:
+`python benchmarks/rescore.py --csv benchmarks/results/talosn_clean/per_residue_corrected.csv --bootstrap`
+prints (53,876 paired residues in 724 proteins; differences are FACET − TALOS-N with a
+95 % protein-level paired-bootstrap interval):
 
-| Metric | TALOS-N | FACET |
-|---|---|---|
-| All-residue median | 13.57° | 12.65° (−0.92°) |
-| fail25 (share of residues > 25°) | 29.6 % | 27.4 % |
-| Mean | 28.9° | 27.4° |
-| p90 | 102.7° | 96.4° |
-| Coil median (n = 17,917) | 22.8° | 20.9° |
-| Helix median (n = 24,099) | 8.5° | 8.0° |
-| Strand median (n = 11,825) | 15.3° | 14.6° |
-| Rigid residues (n = 46,902) | 12.6° | 11.8° |
-| Flexible residues (n = 6,939) | 20.5° | 18.7° |
-| Head-to-head: lower error on … | 46.9 % | 53.1 % of residues (6 exact ties) |
+| Metric | TALOS-N | FACET | difference |
+|---|---|---|---|
+| All-residue median | 11.51° | 11.03° | −0.48° [−0.64, −0.37] |
+| fail25 (share of residues > 25°) | 20.1 % | 18.4 % | −1.7 pt [−2.1, −1.4] |
+| Mean | 21.2° | 20.5° | |
+| p90 | 45.3° | 41.8° | |
+| Coil median (n = 17,946) | 19.2° | 18.3° | −0.92° [−1.26, −0.59] |
+| Helix median (n = 24,099) | 7.4° | 7.1° | −0.30° [−0.39, −0.20] |
+| Strand median (n = 11,831) | 13.5° | 12.9° | −0.68° [−0.91, −0.45] |
+| Rigid residues (n = 46,937) | 10.6° | 10.2° | |
+| Flexible residues (n = 6,939) | 20.5° | 18.7° | |
+| Head-to-head: lower error on … | 47.0 % | 53.0 % of residues (7 exact ties) | [52.4, 53.7] |
 
 and the tier calibration — how much to trust each confidence label FACET attaches:
 
 | Tier | Share of scored residues | Median error | fail25 |
 |---|---|---|---|
-| High | 76.4 % | 10.7° | 19.6 % |
-| Medium | 18.3 % | 24.5° | 49.3 % |
-| Low | 3.7 % | 65.0° | 70.8 % |
-| Flexible | 1.5 % | 80.4° | 82.5 % |
+| High | 76.3 % | 9.3° | 10.1 % |
+| Medium | 18.1 % | 19.3° | 39.0 % |
+| Low | 3.5 % | 52.7° | 66.5 % |
+| Flexible | 2.1 % | 104.4° | 87.5 % |
 
-Read the last row as the point of the tier system: FACET tells you which 1.5 % of its
-answers not to use. (In the top-level README the Flexible row is given as 0.8 % — that
-is the share of Flexible residues that still carry an angle, 416 of 842; the two
-numbers describe the same residues.)
-
-![error CDF](figures/error_cdf.png)
-
-![per-protein scatter](figures/per_protein_scatter.png)
-
-The per-protein picture is the honest one: on 708 proteins with at least ten paired
-residues, FACET's median is lower on 68 %. The cloud around 55° and 110° is not noise —
-those are proteins whose deposited structure disagrees with the shifts for most
-residues (both methods fail identically), which is why medians rather than means are
-reported.
+This is the benchmark of record with the ground truth of 63 X-ray entries corrected
+(see the caveats: the stored values had been converted to radians twice; the
+correction is validated against the PDB files). The uncorrected record,
+`per_residue.csv`, reads 12.65° vs 13.57° — the same comparison, inflated on both
+sides by the wrong truth. `python benchmarks/rescore.py` with no arguments prints
+that uncorrected table.
 
 ## How to read one row of `per_residue.csv`
 

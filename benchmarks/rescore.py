@@ -7,6 +7,7 @@ the numbers. If the numbers it prints disagree with the README, the README is wr
     python benchmarks/rescore.py                 # print the tables
     python benchmarks/rescore.py --figures       # also write benchmarks/figures/*.png
     python benchmarks/rescore.py --csv other.csv # score a re-run instead
+    python benchmarks/rescore.py --bootstrap     # 95 % CIs from a paired bootstrap over proteins
 
 Definitions (see docs/BENCHMARKS.md):
     error   = sqrt((dphi^2 + dpsi^2) / 2), each delta wrapped to [0, 180] degrees
@@ -151,6 +152,72 @@ def table(d: dict[str, np.ndarray]) -> dict:
             "n": int(m.sum()),
         }
     return out
+
+
+def bootstrap(d: dict[str, np.ndarray], n_draws: int = 2000, seed: int = 0) -> dict:
+    """Paired bootstrap over PROTEINS: entries are resampled with replacement, all
+    of an entry's paired residues travel together, so residue-level correlation
+    within a protein is respected. Returns point estimates and 95 % percentile
+    intervals for the FACET-minus-TALOS-N differences and the win rate."""
+    rng = np.random.default_rng(seed)
+    both = d["facet_has"] & d["talosn_has"]
+    ids, ss = d["bmrb_id"][both], d["ss"][both]
+    fe, te = d["facet_err"][both], d["talosn_err"][both]
+    ents = np.unique(ids)
+    idx_by = {e: np.where(ids == e)[0] for e in ents}
+
+    def metrics(sel):
+        f, t, s = fe[sel], te[sel], ss[sel]
+        m = {"d_median": float(np.median(f) - np.median(t)),
+             "d_fail25_pct": float((np.mean(f > 25) - np.mean(t > 25)) * 100),
+             "win_rate_pct": float(np.mean(f < t) * 100)}
+        for code, name in (("H", "helix"), ("E", "strand"), ("C", "coil")):
+            k = s == code
+            m[f"d_median_{name}"] = float(np.median(f[k]) - np.median(t[k])) if k.any() else float("nan")
+        return m
+
+    point = metrics(np.arange(len(fe)))
+    draws = {k: [] for k in point}
+    for _ in range(n_draws):
+        pick = rng.choice(ents, size=len(ents), replace=True)
+        sel = np.concatenate([idx_by[e] for e in pick])
+        for k, v in metrics(sel).items():
+            draws[k].append(v)
+    ci = {k: (float(np.percentile(v, 2.5)), float(np.percentile(v, 97.5))) for k, v in draws.items()}
+    diff = fe - te
+    nz = diff[diff != 0]
+    out = {"n_paired": int(len(fe)), "n_proteins": int(len(ents)), "n_draws": n_draws, "seed": seed,
+           "point": point, "ci95": ci,
+           "sign_test": {"facet_better": int((nz < 0).sum()), "n_nontied": int(len(nz))}}
+    try:
+        from scipy import stats as sst
+        out["sign_test"]["p"] = float(sst.binomtest(int((nz < 0).sum()), int(len(nz))).pvalue)
+        out["wilcoxon_p"] = float(sst.wilcoxon(fe, te, zero_method="wilcox").pvalue)
+    except Exception:
+        pass
+    return out
+
+
+def print_bootstrap(b: dict) -> None:
+    print()
+    print(f"Paired bootstrap over proteins ({b['n_proteins']} proteins, {b['n_paired']:,} paired residues, "
+          f"{b['n_draws']} draws, seed {b['seed']}); FACET minus TALOS-N, 95 % percentile CI:")
+    print()
+    print("| Quantity | Point | 95 % CI |")
+    print("|---|---|---|")
+    labels = {"d_median": "Delta all-residue median", "d_fail25_pct": "Delta fail25 (points)",
+              "win_rate_pct": "FACET win rate (%)", "d_median_helix": "Delta helix median",
+              "d_median_strand": "Delta strand median", "d_median_coil": "Delta coil median"}
+    for k, lab in labels.items():
+        unit = "" if ("win" in k or "fail25" in k) else " deg"
+        lo, hi = b["ci95"][k]
+        print(f"| {lab} | {b['point'][k]:+.2f}{unit} | [{lo:+.2f}, {hi:+.2f}] |")
+    st = b["sign_test"]
+    p_txt = f", binomial p = {st['p']:.1e}" if "p" in st else ""
+    w_txt = f"; Wilcoxon signed-rank p = {b['wilcoxon_p']:.1e}" if "wilcoxon_p" in b else ""
+    print()
+    print(f"Residue-level sign test: FACET closer on {st['facet_better']:,} of {st['n_nontied']:,} "
+          f"non-tied residues{p_txt}{w_txt}")
 
 
 def print_tables(t: dict) -> None:
@@ -308,6 +375,9 @@ def main() -> None:
                     help="score the facet_*_rerun columns of a run_talosn_comparison.py output")
     ap.add_argument("--exclude-suspect", action="store_true",
                     help="drop residues whose ground truth is flagged truth_units_suspect")
+    ap.add_argument("--bootstrap", action="store_true",
+                    help="paired bootstrap over proteins (2,000 draws, seed 0) for the head-to-head "
+                         "differences, plus residue-level sign/Wilcoxon tests")
     ap.add_argument("--corrected-truth", action="store_true",
                     help="rescale flagged ground truth by 180/pi and re-derive both errors "
                          "from stored angles (needs a run_talosn_comparison.py output)")
@@ -324,6 +394,9 @@ def main() -> None:
         print(f"[ground truth rescaled for {n_sus:,} flagged residues; both errors re-derived from stored angles]\n")
     t = table(d)
     print_tables(t)
+    if args.bootstrap:
+        t["bootstrap"] = bootstrap(d)
+        print_bootstrap(t["bootstrap"])
     print_ablation()
     if args.json:
         json.dump(t, open(args.json, "w"), indent=2)

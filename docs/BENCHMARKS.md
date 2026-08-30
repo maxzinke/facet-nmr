@@ -183,6 +183,87 @@ angle. The underlying values are identical; `rescore.py` prints them unrounded w
 least ten paired residues, FACET's median is lower on 68 %
 (`benchmarks/figures/per_protein_scatter.png`).
 
+**Which residues are paired.** TALOS-N's `Strong`, `Generous`, `Warn` and `Dyn` classes
+all carry an angle and are all scored (45,492 / 2,005 / 4,818 / 1,945 of the paired
+residues); only `None` (776 residues) is a non-prediction. FACET's `None` tier is scored
+whenever an angle was emitted (416 residues) and counted as a non-prediction when the
+harness left it blank (426). 16 of the 740 entries (532 residues) have `None` on every
+residue because TALOS-N produced no output file for them — re-running one of them
+(BMRB 16038) reproduces a crash during "ANN prediction" — so the paired set spans
+**724 entries**. Those 532 residues are counted against TALOS-N's coverage (98.6 %);
+its genuine per-residue refusals are 244 (0.4 %). Fifteen of the 16 sequences contain
+non-standard residues (`X`), which FACET skips; 51 of the 745 inputs contain one, and
+TALOS-N handled the other 35.
+
+### 4.1 Statistical uncertainty
+
+`rescore.py --bootstrap` resamples **proteins** with replacement (2,000 draws, seed 0),
+carrying each protein's residues together, so the intervals respect the fact that
+residues within a protein are not independent. FACET minus TALOS-N, benchmark of
+record:
+
+| Quantity | Point | 95 % CI |
+|---|---|---|
+| Δ all-residue median | −0.92° | [−1.07, −0.71] |
+| Δ fail25 | −2.27 points | [−2.60, −1.95] |
+| Δ helix median | −0.46° | [−0.57, −0.33] |
+| Δ strand median | −0.72° | [−0.95, −0.49] |
+| Δ coil median | −1.92° | [−2.49, −1.40] |
+| FACET win rate | 53.1 % | [52.6, 53.7] |
+
+Residue-level: FACET is closer on 28,606 of 53,835 non-tied residues (sign test
+p = 5 × 10⁻⁴⁸; Wilcoxon signed-rank p = 3 × 10⁻⁷⁶). The mean paired difference is
+−1.53°, the median paired difference −0.30°: the advantage is small per residue and
+consistent across proteins rather than large anywhere. Intervals for the corrected
+benchmark are in §7.
+
+### 4.2 Restricting both methods to their confident classes
+
+A TALOS-N user takes `Strong` (and sometimes `Generous`) residues and discards the rest.
+The equivalent FACET set is High (+ Medium). Restricting **both** methods to those
+classes on the same residues, benchmark of record:
+
+| Residues | n | TALOS-N median / fail25 | FACET median / fail25 | FACET wins |
+|---|---|---|---|---|
+| TALOS-N Strong+Generous ∩ FACET High+Medium | 46,299 | 11.95° / 23.7 % | 11.40° / 22.4 % | 52.9 % |
+| TALOS-N Strong ∩ FACET High | 38,975 | 10.82° / 19.4 % | 10.30° / 18.5 % | 53.2 % |
+
+Each method on its *own* confident subset (different residues, so not a head-to-head):
+TALOS-N Strong covers 84.1 % of paired residues at 11.84° / 23.4 % fail25; FACET High
+covers 77.2 % at 10.65° / 19.6 %. TALOS-N Strong+Generous covers 87.7 % at 12.14° /
+24.6 %; FACET High+Medium covers 95.5 % at 12.17° / 25.3 %. FACET's High tier is
+tighter than TALOS-N's Strong class; its Medium tier is looser than TALOS-N's
+Generous class and covers more.
+
+### 4.3 Fairness to TALOS-N
+
+* **Version and invocation.** TALOS-N 4.21 (Rev 2016.343.11.31), Linux x64 binary,
+  run once per protein with
+  `TALOSN.linux9_x64 -in <entry>.tab -talosnDir /opt/talosn -noauto -noverb` and no
+  other options. `-noauto` only disables TALOS-N's input-format auto-detection (the
+  inputs are already NMRPipe tables); its default `-autoExcl` — exclude database
+  proteins whose sequence is identical to the input — was left on. Chemical shifts were
+  given to both methods as deposited, without re-referencing; FACET's referencing check
+  was likewise off (`auto_reference=False`) for the record.
+* **TALOS-N's database.** The distribution's `talos.obsCS.tab` lists its reference
+  proteins by BMRB accession: 498 entries
+  (`benchmarks/data/talosn_database_bmrb_ids.txt`). **9 of the 745 test proteins are in
+  it** (5868, 6589, 10092, 10137, 15013, 15038, 15303, 15541, 15913; 651 paired
+  residues, 1.2 %); they favour TALOS-N unless `-autoExcl` removed them. On those 651
+  residues the two methods tie (clean truth: TALOS-N 12.52° vs FACET 12.94°, FACET wins
+  52.0 %); removing them leaves the headline at 12.57° vs 13.50°. 47 train and 9
+  validation entries are also in TALOS-N's database, which does not affect the
+  comparison. The test set was never selected to be held out from TALOS-N's database;
+  the split is homology-aware with respect to FACET's training data only.
+* **Ground truth provenance.** 12.8 % of paired residues (62 entries) have a
+  single-model X-ray structure as truth; the remainder are NMR ensembles, some of which
+  will have been refined with TALOS-family dihedral restraints. That favours TALOS-N on
+  those entries by an amount that cannot be quantified from the deposition records
+  alone.
+* **Failures counted as abstentions.** The 16 entries above are counted as TALOS-N
+  non-predictions rather than dropped; dropping them instead changes no head-to-head
+  number, because unpaired residues are not scored.
+
 ## 5. The missing-atom ablation
 
 **Question.** When HA, H or CB are unassigned — perdeuterated samples, incomplete
@@ -310,67 +391,80 @@ preserved (−0.85° vs −0.92° on the median, every per-SS median, the head-t
 count); the tail is heavier because the public path emits an angle for residues the
 harness left blank.
 
-## 7. A known defect in the ground truth, and the numbers without it
+## 7. The ground-truth units defect, its extent, and the corrected benchmark
 
-While exporting the per-residue table it became apparent that **6,978 scored residues
-in 63 entries have a ground truth that is not in degrees.** Their φ/ψ "degrees" all lie
-within ±3.15° of zero — exactly π·π/180, what a radian value becomes when converted to
-radians a second time. No real residue has both φ and ψ within 3° of zero. All affected
-entries are single-model structures; rescaling their truth by 180/π returns ordinary
-Ramachandran values, and TALOS-N's median error on them drops from ~69° to ~12°, so
-the residues are ordinary and the stored truth is wrong, not the proteins.
+**What is wrong.** 6,978 scored residues in 63 entries have φ/ψ "degrees" within ±3.15°
+of zero — exactly π·π/180, a radian value converted to radians a second time. All 63
+are single-model (X-ray) structures, and **every** single-model residue in the test set
+is affected (6,869 of 6,869 paired residues with X-ray truth).
 
-Both methods are scored against the same wrong truth, so the *comparison* survives —
-they fail identically on those residues — but the absolute numbers in §4 are inflated
-by them. The CSV flags each such residue (`truth_units_suspect = 1`), and
-`rescore.py --exclude-suspect` gives the benchmark without them:
+**Validation of the correction.** Multiplying the stored values by 180/π was checked
+against φ/ψ recomputed independently with gemmi from the deposited mmCIF files of six
+of the affected entries (1,648 residues, all their residues; PDB 3P62, 4JCC, 1GUB,
+1ECE, 1RTC, 3OOI): median absolute deviation **0.02°**, 100 % of residues within 1°,
+against 82–120° for the values as stored. The correction is right.
 
-| Metric (46,972 paired residues) | TALOS-N | FACET |
-|---|---|---|
-| All-residue median | 11.50° | 10.88° (−0.62°) |
-| fail25 | 19.4 % | 17.2 % |
-| Mean | 20.6° | 19.3° |
-| p90 | 41.6° | 36.8° |
-| Coil median (n = 15,371) | 19.0° | 17.8° |
-| Helix median (n = 21,419) | 7.4° | 7.1° |
-| Strand median (n = 10,182) | 13.6° | 12.8° |
-| Win rate | 46.2 % | 53.8 % |
-| High tier (78.2 % of residues) | — | 9.4°, fail25 9.9 % |
-| Medium tier (17.1 %) | — | 19.3°, fail25 38.7 % |
-| Low tier (3.2 %) | — | 57.2°, fail25 67.2 % |
+**How far it reaches.** The same double conversion sits in the single-model path of the
+data pipeline, so it affects every X-ray-truth entry in the dataset, not only the test
+set: 442 entries, 50,983 residues; **36,237 training residues (11.7 % of the finite
+training targets, all marked well-defined)**, 7,671 validation residues, 105 of the
+3,404 residues scored in the missing-atom ablation (§5), 2,334 of the 219,713 rows of
+the shipped retrieval index (1.1 %; the 0.2.0 clean-up removed the rows at exactly
+zero but not these), and 36,237 of the 310,923 rows of the shipped shift reference
+(11.7 %). The consequences for the *model* — training on ~12 % near-(0°, 0°) targets,
+and an opt-in fallback whose reference is 12 % corrupt — are recorded in
+`docs/LIMITATIONS.md`; the pipeline fix, retraining and rebuilt assets are the next
+release. This section deals with the *benchmark*.
 
-Excluding them changes the *absolute* level a lot and the *comparison* a little: the
-FACET margin goes from −0.92° to −0.62° on the median and the win rate rises from
-53.1 % to 53.8 %.
+**Corrected tables.** `benchmarks/build_corrected_truth.py` writes two files:
 
-**Scoring the flagged residues properly instead of dropping them.** The record stores
-only errors, so its FACET angles cannot be re-scored; the public-path re-run (§6)
-stores angles for both methods. `rescore.py --csv per_residue_rerun.csv --corrected-truth`
-rescales the flagged truth by 180/π and recomputes both errors from the stored angles:
+* `per_residue_corrected.csv` — the benchmark of record with the flagged truth
+  rescaled. TALOS-N's error on those rows is recomputed from its stored angles. The
+  record stores no FACET angles, so FACET's error on the flagged rows comes from the
+  public-path re-run (§6; 96.5 % agreement with the record elsewhere); the column
+  `facet_err_source` marks each row `record` or `rerun`. Unflagged rows are untouched.
+* `per_residue_rerun_corrected.csv` — the public-path re-run with the flagged truth
+  rescaled and both errors recomputed. Single-source; what the released package
+  reproduces.
 
-| Metric (54,260 paired residues, public path, 0.4.0 default) | TALOS-N | FACET |
-|---|---|---|
-| All-residue median | 11.58° | 11.18° (−0.40°) |
-| fail25 | 20.3 % | 19.6 % |
-| Mean | 21.3° | 21.8° |
-| p90 | 46.1° | 52.5° |
-| Coil / Helix / Strand median | 19.3 / 7.4 / 13.6° | 18.7 / 7.1 / 12.9° |
-| Win rate | 47.8 % | 52.2 % |
+`rescore.py --csv <file> [--rerun] --bootstrap`:
 
-Excluding the flagged residues from the public-path run instead
-(`--rerun --exclude-suspect`, 47,356 paired) gives 11.07° vs 11.57° (−0.50°), fail25
-18.6 % vs 19.6 %, win rate 52.9 %.
+| Metric | TALOS-N | FACET, corrected record | FACET, corrected public path |
+|---|---|---|---|
+| Paired residues | | 53,876 | 54,260 |
+| All-residue median | 11.51° / 11.58° | 11.03° (−0.48°) | 11.18° (−0.40°) |
+| fail25 | 20.1 % / 20.3 % | 18.4 % | 19.6 % |
+| Mean | 21.2° / 21.3° | 20.5° | 21.8° |
+| p90 | 45.3° / 46.1° | 41.8° | 52.5° |
+| Coil / Helix / Strand median | 19.2 / 7.4 / 13.5° | 18.3 / 7.1 / 12.9° | 18.7 / 7.1 / 12.9° |
+| Win rate | 47.0 % / 47.8 % | 53.0 % (7 ties) | 52.2 % (7 ties) |
+| High tier: coverage, median, fail25 | — | 76.3 %, 9.3°, 10.1 % | 74.6 %, 9.2°, 9.9 % |
+| Medium tier | — | 18.1 %, 19.3°, 39.0 % | 17.2 %, 19.3°, 38.8 % |
 
-On the corrected entries alone (6,904 paired residues in 62 entries, all single-model
-structures) FACET is *behind*: median 12.19° vs 11.65°, win rate 47.8 %, fail25 26.5 %
-vs 25.0 %. So the corrected comparison is closer than either the record or the
-exclusion suggests: FACET keeps an edge on every median and on the head-to-head
-count, and TALOS-N has the lighter tail.
+(TALOS-N's two columns differ only in the paired set.) Bootstrap over proteins, 95 %
+CIs, FACET minus TALOS-N:
 
-The README's headline table is the benchmark of record and is left as measured; this
-section exists so that a reader who notices the ±3° cluster in the CSV knows it was
-noticed too, and knows what the benchmark looks like without it. The fix belongs in the
-ground-truth builder (and then in a re-measured record), not in the scoring script.
+| Quantity | corrected record | corrected public path | NMR-truth only (`--exclude-suspect`) |
+|---|---|---|---|
+| Δ median | −0.48° [−0.64, −0.37] | −0.40° [−0.54, −0.27] | −0.62° [−0.74, −0.50] |
+| Δ fail25 | −1.71 [−2.08, −1.37] | −0.73 [−1.10, −0.40] | −2.20 [−2.54, −1.85] |
+| Δ helix / strand / coil median | −0.30 / −0.68 / −0.92° | −0.27 / −0.64 / −0.62° | −0.32 / −0.73 / −1.23° |
+| FACET win rate | 53.0 % [52.4, 53.7] | 52.2 % [51.6, 52.9] | 53.8 % [53.2, 54.3] |
+
+Every interval excludes zero. On the 63 corrected entries alone (X-ray truth) FACET is
+*behind*: 12.19° vs 11.65°, win rate 47.8 % (public path). Two readings are consistent
+with that: the model's X-ray training targets were corrupt (above), and solution
+shifts against crystal coordinates are a slightly different task from solution shifts
+against a solution ensemble. Either way, the corrected margin over TALOS-N is about
+half the record's — roughly −0.4 to −0.5° on the median, 1–2 points of fail25, 52–53 %
+of residues — and it is statistically unambiguous.
+
+**What to cite.** The record (§4) is what was measured, and is kept because the
+per-residue rows are what every other number here is derived from; its absolute errors
+are inflated by the defect and its margin over TALOS-N overstated by ~0.4°. The
+corrected record is the honest single table; the corrected public path is what
+`pip install facet-nmr` reproduces. Do not cite the record's absolute medians without
+the caveat.
 
 ## 8. Every README table and where it comes from
 
@@ -383,6 +477,10 @@ ground-truth builder (and then in a re-measured record), not in the scoring scri
 | "49 proteins with no HA: 9.6° vs 10.1°" | `per_residue.csv` restricted to entries whose inputs have no HA column, clean truth | §6.1 |
 | Ground-truth caveat (10.88° vs 11.50°; 11.18° vs 11.58°) | `per_residue.csv` with `--exclude-suspect`; `per_residue_rerun.csv` with `--rerun --corrected-truth` | `rescore.py` |
 | "Public path reproduces the record on 96.5 % of residues; 12.80° vs 13.65°" | `per_residue_rerun.csv` | `rescore.py --rerun`; §6.2 |
+| Bootstrap CIs, sign / Wilcoxon tests | any of the above | `rescore.py --bootstrap`; §4.1, §7 |
+| Corrected-truth tables (11.03° vs 11.51°; 11.18° vs 11.58°) | `per_residue_corrected.csv`, `per_residue_rerun_corrected.csv` | `build_corrected_truth.py`, then `rescore.py`; §7 |
+| Confidence-restricted comparison (11.40° vs 11.95° on S+G ∩ H+M) | `per_residue.csv`, columns `talosn_class`, `facet_tier` | §4.2 |
+| TALOS-N database overlap (9 / 745) | `benchmarks/data/talosn_database_bmrb_ids.txt` | §4.3 |
 | Before/after scorer-fix table in `DATA_PROVENANCE.md` | §5 above; `after` = the same `results.json` | — |
 | Test-set identity | `benchmarks/data/test_set_745.txt` | `check_leakage.py` |
 

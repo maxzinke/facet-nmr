@@ -9,7 +9,6 @@ wheel install alike. Nothing here ever triggers a download.
 """
 from __future__ import annotations
 
-import os
 
 import pytest
 

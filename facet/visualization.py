@@ -269,7 +269,6 @@ def plot_sequence_ss(
     # and fall back to placeholder rendering — most likely the reader picked
     # the wrong entity or the seq_id_start is wrong.
     if display_sequence:
-        seq_end = display_seq_id_start + len(display_sequence) - 1
         n_check = 0
         n_mismatch = 0
         for r in residues:

@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from facet.io.formats import FACETResult, Residue, ResiduePrediction, ShiftList
+from facet.io.formats import FACETResult, ResiduePrediction
 from facet.io.nef import read_nef
 from facet.io.nmrstar import read_nmrstar
 from facet.io.readers import read_auto, read_csv, read_tab
@@ -270,26 +270,26 @@ class TestWriters:
         text = out.read_text()
         assert "PHI" in text
         assert "CYANA" not in text  # should not contain program name in the body
-        lines = [l for l in text.splitlines() if l.strip() and not l.startswith("#")]
+        lines = [ln for ln in text.splitlines() if ln.strip() and not ln.startswith("#")]
         # Default gating: High tier only → 1 residue (GLN) × 2 angles = 2 lines
         assert len(lines) == 2
-        assert all(l.split()[0] == "2" for l in lines), lines
+        assert all(ln.split()[0] == "2" for ln in lines), lines
 
     def test_aco_include_medium(self, tmp_path):
         result = _sample_result()
         out = write_aco(result, tmp_path / "test.aco", accepted_only=True,
                         include_medium=True)
-        lines = [l for l in out.read_text().splitlines()
-                 if l.strip() and not l.startswith("#")]
+        lines = [ln for ln in out.read_text().splitlines()
+                 if ln.strip() and not ln.startswith("#")]
         # High + Medium → 2 residues × 2 angles = 4 lines; Low (GLY) excluded
         assert len(lines) == 4
-        assert {l.split()[0] for l in lines} == {"1", "2"}
+        assert {ln.split()[0] for ln in lines} == {"1", "2"}
 
     def test_aco_include_all(self, tmp_path):
         result = _sample_result()
         out = write_aco(result, tmp_path / "test.aco", accepted_only=False)
-        lines = [l for l in out.read_text().splitlines()
-                 if l.strip() and not l.startswith("#")]
+        lines = [ln for ln in out.read_text().splitlines()
+                 if ln.strip() and not ln.startswith("#")]
         # accepted_only=False writes every residue regardless of tier
         assert len(lines) == 6
 
@@ -308,8 +308,8 @@ class TestWriters:
         text = out.read_text()
         assert "VARS" in text
         # All 3 residues (not filtered)
-        data_lines = [l for l in text.splitlines()
-                      if l.strip() and not l.strip().startswith(("REMARK", "VARS", "FORMAT"))]
+        data_lines = [ln for ln in text.splitlines()
+                      if ln.strip() and not ln.strip().startswith(("REMARK", "VARS", "FORMAT"))]
         assert len(data_lines) == 3
 
     def test_csv_writer(self, tmp_path):

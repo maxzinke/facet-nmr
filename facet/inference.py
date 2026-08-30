@@ -9,12 +9,24 @@ Public API::
 from __future__ import annotations
 
 import logging
-import math
 from functools import lru_cache
 from pathlib import Path
 
 import numpy as np
 import torch
+
+from .io.formats import (
+    BACKBONE_NUCLEI,
+    CANONICAL_AA,
+    CONF_FLEXIBLE,
+    CONF_HIGH,
+    CONF_LOW,
+    CONF_MEDIUM,
+    FACETResult,
+    ResiduePrediction,
+    ShiftList,
+)
+from .random_coil import to_secondary_shifts
 
 logger = logging.getLogger("facet")
 
@@ -35,18 +47,6 @@ _SHIFT_RANGE = {
 
 _MIN_RESIDUES = 3  # need at least 3 residues for a pentapeptide center + neighbors
 
-from .io.formats import (
-    BACKBONE_NUCLEI,
-    CANONICAL_AA,
-    CONF_FLEXIBLE,
-    CONF_HIGH,
-    CONF_LOW,
-    CONF_MEDIUM,
-    FACETResult,
-    ResiduePrediction,
-    ShiftList,
-)
-from .random_coil import to_secondary_shifts
 
 # AA 3-letter → index (1-20, 0=pad)
 AA_TO_IDX = {aa: i + 1 for i, aa in enumerate(CANONICAL_AA)}
@@ -251,7 +251,6 @@ def _find_checkpoint() -> Path:
     pkg = Path(__file__).resolve().parent
     for candidate in [
         pkg / "weights" / "facet_v3.pt",
-        pkg / "weights" / "best.onnx",
         Path(os.environ.get("FACET_WEIGHTS", "")) if os.environ.get("FACET_WEIGHTS") else None,
     ]:
         if candidate is not None and candidate.exists():
@@ -307,7 +306,6 @@ def predict(
         (tier), SS, chi1. When retrieval is used, each prediction also
         carries basin_populations and alt_clusters.
     """
-    import logging
 
     # Load shift list
     if isinstance(input_, ShiftList):

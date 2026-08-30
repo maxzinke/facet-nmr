@@ -39,7 +39,6 @@ def read_tab(path: str | Path) -> ShiftList:
 
     # Parse VARS header to determine format
     vars_line = ""
-    format_line = ""
     data_lines: list[str] = []
     for line in lines:
         stripped = line.strip()
@@ -49,7 +48,6 @@ def read_tab(path: str | Path) -> ShiftList:
             vars_line = stripped
             continue
         if stripped.startswith("FORMAT"):
-            format_line = stripped
             continue
         data_lines.append(stripped)
 

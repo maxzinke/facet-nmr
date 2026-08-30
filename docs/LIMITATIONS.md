@@ -114,6 +114,22 @@ for how the numbers were obtained.
   training-run test set was 58.7 % with class-weighted training (g+ 56 %, g− 55 %,
   trans 66 %) — useful as a prior, not as a restraint.
 
+## Known defect in the shipped artifacts (fix in the next release)
+
+* **~12 % of the training targets were wrong.** Every single-model (X-ray) structure
+  in the data pipeline had its φ/ψ converted to radians twice, leaving values within
+  ±0.06 rad of zero: 36,237 of the training residues (11.7 %), all marked well-defined,
+  were therefore trained toward ≈ (0°, 0°). The model still reaches the numbers in
+  `docs/BENCHMARKS.md`, but it was trained against corrupt labels for one residue in
+  nine and should improve when retrained on the corrected pipeline.
+* **The shipped retrieval index carries 2,334 corrupt rows (1.1 %)** with φ/ψ ≈ 0; a
+  residue whose neighbours include them can be pulled toward the origin or lose its
+  cluster. **The shipped shift reference carries 36,237 corrupt rows (11.7 %)**, which
+  is one more reason the mask-safe fallback that reads it is opt-in.
+* **The benchmark's X-ray-truth residues (12.8 %) were scored against the same corrupt
+  values**; `docs/BENCHMARKS.md` §7 gives the validated correction and the corrected
+  tables. FACET is slightly behind TALOS-N on those residues after correction.
+
 ## Scope of the benchmark evidence
 
 * The head-to-head comparison is against **TALOS-N alone**, on **BMRB-deposited
@@ -127,6 +143,18 @@ for how the numbers were obtained.
   and the shift reference (checked), but they were drawn from the same BMRB/PDB
   population as the training data. Performance on out-of-distribution samples
   (unusual conditions, non-natural sequences) is unmeasured.
+* **The homology split uses a 3-mer-frequency cosine similarity (threshold 0.5), not
+  sequence identity.** It links close relatives reliably but has not been checked
+  against an alignment-based clustering (e.g. 30 % identity with MMseqs2), so remote
+  homologues of test proteins may exist in the training set. The benchmark should be
+  read as "held out at the sequence-family level", not as a strict remote-homology
+  test.
+* **The test set is not held out from TALOS-N's database**: 9 of the 745 proteins are
+  in it (1.2 % of paired residues, no measurable effect on the tables;
+  `docs/BENCHMARKS.md` §4.3), and NMR structures refined with TALOS-family restraints
+  favour TALOS-N by an amount that cannot be quantified from the depositions.
+* **The benchmark compares against TALOS-N 4.21 (2016) only**, with its default
+  parameters; newer or differently configured predictors were not run.
 
 ## Software
 

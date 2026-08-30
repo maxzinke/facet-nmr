@@ -21,7 +21,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
-        python: ["3.10", "3.11", "3.12"]
+        python: ["3.10", "3.11", "3.12", "3.13"]
     env:
       FACET_NO_DOWNLOAD: "1"
     steps:
@@ -90,3 +90,10 @@ jobs:
 
       - name: End-to-end tests
         run: python -m pytest -q -rs -m needs_assets
+
+      # The README numbers must regenerate from the published per-residue table, and
+      # the benchmark proteins must be absent from the shipped index and reference.
+      - name: Benchmark tables regenerate and leakage check passes
+        run: |
+          python benchmarks/rescore.py
+          python benchmarks/check_leakage.py

@@ -35,7 +35,6 @@ class _FACETONNXWrapper:
         self._module.model = model
 
     def _forward(self, shifts, masks, aa_idx, flags):
-        import torch
         out = self.model.forward(shifts, masks, aa_idx, flags)
         return (
             out["coarse_logits"],       # (B, 1296)

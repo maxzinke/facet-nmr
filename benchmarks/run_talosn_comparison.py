@@ -39,7 +39,6 @@ import time
 from collections import defaultdict
 from pathlib import Path
 
-import numpy as np
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
@@ -105,7 +104,7 @@ def main() -> None:
     cols = list(truth_rows[0].keys())
     extra = ["phi_facet", "psi_facet", "facet_phi_err", "facet_psi_err", "facet_tier_rerun", "facet_err_rerun"]
 
-    ids = args.ids or [l.strip() for l in args.id_list.read_text().splitlines() if l.strip()]
+    ids = args.ids or [ln.strip() for ln in args.id_list.read_text().splitlines() if ln.strip()]
     ids = [i for i in ids if i in truth]  # entries without any scorable residue are skipped
     print(f"running FACET on {len(ids)} entries ...", flush=True)
 

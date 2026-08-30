@@ -37,7 +37,6 @@ Phase 3.5.3 for the calibration plan.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
 
 import numpy as np
 

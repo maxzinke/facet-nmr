@@ -45,61 +45,63 @@ Or use the web app: <https://huggingface.co/spaces/SiXa18/facet>.
 
 ## Accuracy
 
-Leak-safe benchmark of 745 proteins held out by sequence-similarity clustering;
-figures are over the **53,841 residues both methods predict** (FACET emits a
-prediction for 99.2 % of the 55,036 scored residues, TALOS-N for 98.6 %).
+Leak-safe benchmark of 745 proteins held out by sequence-similarity clustering,
+scored against the deposited structures. Figures are over the **53,876 residues both
+methods predict** (724 proteins; FACET emits a prediction for 99.3 % of the 55,036
+scored residues, TALOS-N for 98.6 %). Differences are FACET − TALOS-N with a 95 %
+protein-level paired-bootstrap interval.
 
-| | TALOS-N | **FACET** |
-|---|---|---|
-| Median φ/ψ error | 13.57° | **12.65°** |
-| Residues with error > 25° | 29.7 % | **27.4 %** |
-| Mean | 28.9° | **27.4°** |
-| p90 | 102.7° | **96.5°** |
-| Helix median (n = 24,099) | 8.5° | **8.0°** |
-| Strand median (n = 11,825) | 15.3° | **14.6°** |
-| Coil median (n = 17,917) | 22.8° | **20.9°** |
-| Head-to-head win rate | 46.9 % | **53.1 %** |
+| | TALOS-N | **FACET** | difference |
+|---|---|---|---|
+| Median φ/ψ error | 11.51° | **11.03°** | −0.48° [−0.64, −0.37] |
+| Residues with error > 25° | 20.1 % | **18.4 %** | −1.7 pt [−2.1, −1.4] |
+| Mean | 21.2° | **20.5°** | |
+| p90 | 45.3° | **41.8°** | |
+| Helix median (n = 24,099) | 7.4° | **7.1°** | −0.30° [−0.39, −0.20] |
+| Strand median (n = 11,831) | 13.5° | **12.9°** | −0.68° [−0.91, −0.45] |
+| Coil median (n = 17,946) | 19.2° | **18.3°** | −0.92° [−1.26, −0.59] |
+| Head-to-head win rate | 47.0 % | **53.0 %** | [52.4, 53.7] |
 
 Error is `sqrt((Δφ² + Δψ²) / 2)`, each difference wrapped to [0°, 180°], against the
-circular-mean angles over the models of the deposited structure. Win rate counts the
-residue-wise closer method (6 exact ties).
-
-> **Known defect in the ground truth.** 6,978 of the scored residues (63 single-model
-> entries) carry φ/ψ reference values that were converted to radians twice; both
-> methods are scored against the same wrong values, so the comparison stands but the
-> absolute errors above are inflated by them. Without those residues: FACET 10.88° vs
-> TALOS-N 11.50° median, fail25 17.2 % vs 19.4 %, win rate 53.8 %. Re-scoring them
-> against corrected values narrows the margin (11.18° vs 11.58°). The affected rows
-> are flagged in the published table; the full account is in
-> [docs/BENCHMARKS.md](docs/BENCHMARKS.md) §7.
+circular-mean angles over the models of the deposited structure. The table is the
+benchmark of record with a validated correction to the ground truth of 63 X-ray
+entries (see the note below); every number regenerates from
+`benchmarks/results/talosn_clean/per_residue_corrected.csv` with
+`python benchmarks/rescore.py --csv … --bootstrap`.
 
 **Confidence tiers** (retrieval mode, same benchmark):
 
 | Tier | Share | Median error | > 25° | Written to restraints |
 |---|---|---|---|---|
-| **High** | 76.4 % | 10.6° | 19.6 % | yes (±20°) |
-| **Medium** | 18.3 % | 24.5° | 49.3 % | with `--include-medium` (±35°) |
-| **Low** | 3.7 % | 65.0° | 71.0 % | no — multi-modal |
-| **Flexible** | 1.5 % | — | — | no — no coherent cluster |
+| **High** | 76.3 % | 9.3° | 10.1 % | yes (±20°) |
+| **Medium** | 18.1 % | 19.3° | 39.0 % | with `--include-medium` (±35°) |
+| **Low** | 3.5 % | 52.7° | 66.5 % | no — multi-modal |
+| **Flexible** | 2.1 % | — | — | no — no coherent cluster |
 
 *Flexible* is not a failure state: it flags residues whose retrieved neighbours do
 not agree, which is what conformational averaging looks like in shift space. The
 basin populations still describe those residues.
 
-**Missing shifts.** 49 of the clean-truth benchmark proteins have no HA shifts at
-all (perdeuterated-style assignments); on their 4,133 residues FACET scores 9.6°
-median against TALOS-N's 10.1°, so incomplete assignments are handled by the default
-path. An opt-in shift-space fallback (`--mask-safe-fallback`) exists for inputs where
-the encoder path fails; on a separate synthetic ablation (39 entries, every HA
-stripped) it holds 13.6° with or without HA. It was the default in 0.3.1 and cost
-accuracy on real data — see [docs/BENCHMARKS.md](docs/BENCHMARKS.md) §6.
+**Missing shifts.** 49 of the benchmark proteins with NMR-ensemble truth have no HA
+shifts at all (perdeuterated-style assignments); on their 4,133 residues FACET scores
+9.6° median against TALOS-N's 10.1°, so incomplete assignments are handled by the
+default path. An opt-in shift-space fallback (`--mask-safe-fallback`) exists for
+inputs where the encoder path fails; it was the default in 0.3.1 and cost accuracy on
+real data — see [docs/BENCHMARKS.md](docs/BENCHMARKS.md) §6.
 
-Running the released package on the same 745 input files reproduces the recorded
-per-residue errors on 96.5 % of residues (12.80° vs 13.65° when scored on its own;
-`benchmarks/run_talosn_comparison.py`). Every number above is regenerated from the
-published per-residue results by `python benchmarks/rescore.py`; the test-set IDs, the exact input shift tables and a
-leakage check are in [benchmarks/](benchmarks/). The protocol, metric definitions and
-the TALOS-N invocation are in [docs/BENCHMARKS.md](docs/BENCHMARKS.md).
+> **What you should know before quoting these numbers.** While preparing this release
+> we found that every single-model (X-ray) structure in the data pipeline had its φ/ψ
+> converted to radians twice. Consequences, all documented in
+> [docs/BENCHMARKS.md](docs/BENCHMARKS.md) §7 and [docs/LIMITATIONS.md](docs/LIMITATIONS.md):
+> the benchmark truth for 63 entries (6,978 residues) was wrong and has been corrected
+> and validated against the PDB files (median deviation 0.02°) — the table above uses
+> the corrected truth, whereas the uncorrected record read 12.65° vs 13.57°; and
+> **11.7 % of the training targets, 1.1 % of the shipped retrieval index and 11.7 % of
+> the shift reference carry the same defect.** The model still reaches the numbers
+> above, FACET is slightly *behind* TALOS-N on the corrected X-ray entries, and a
+> retrained release on the fixed pipeline is the next step. Running the released
+> package on the same 745 inputs reproduces the recorded per-residue errors on 96.5 %
+> of residues (11.18° vs 11.58° on the corrected truth when scored on its own).
 
 ## Where the details are
 

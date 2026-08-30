@@ -60,12 +60,16 @@ First public release.
   and skipped when they are absent.
 
 ### Known issues
-- 6,978 residues (63 single-model entries) of the benchmark ground truth were
-  converted to radians twice. Both methods are scored against the same values, so the
-  comparison holds, but absolute errors are inflated; the rows are flagged in
-  `benchmarks/results/talosn_clean/per_residue.csv` and docs/BENCHMARKS.md §7 gives
-  the numbers without them. The fix is in the ground-truth builder and a re-measured
-  record will follow.
+- Every single-model (X-ray) structure in the data pipeline had its φ/ψ converted to
+  radians twice. The benchmark truth for 63 entries (6,978 residues) has been
+  corrected and validated against the PDB files (`benchmarks/build_corrected_truth.py`;
+  the README table uses the corrected truth, 11.03° vs 11.51°, where the uncorrected
+  record read 12.65° vs 13.57°). The same defect affects 11.7 % of the training
+  targets, 1.1 % of the shipped retrieval index and 11.7 % of the shift reference;
+  see docs/LIMITATIONS.md. A retrained release on the fixed pipeline will follow.
+- 16 of the 740 benchmark entries have no TALOS-N prediction because TALOS-N 4.21
+  crashes on them (15 contain non-standard residue codes); they count against
+  TALOS-N's coverage and are excluded from the paired set.
 
 ## [0.3.1] — 2026-05-29
 

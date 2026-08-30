@@ -20,10 +20,7 @@ from pathlib import Path
 
 from .. import __version__
 from .formats import (
-    CONF_HIGH,
-    CONF_MEDIUM,
     FACETResult,
-    ResiduePrediction,
 )
 
 # ─────────────────────── XPLOR/CNS .tbl ────────────────────────
@@ -181,7 +178,7 @@ def write_nef(
     lines.append("   _nef_nmr_meta_data.sf_framecode      nef_nmr_meta_data")
     lines.append("   _nef_nmr_meta_data.format_name       nmr_exchange_format")
     lines.append("   _nef_nmr_meta_data.format_version    1.1")
-    lines.append(f"   _nef_nmr_meta_data.program_name      facet")
+    lines.append("   _nef_nmr_meta_data.program_name      facet")
     lines.append(f"   _nef_nmr_meta_data.program_version   {program_version}")
     lines.append("save_")
     lines.append("")

@@ -693,13 +693,12 @@ def predict(
 
     # ── Mask-safe shift-retrieval fallback for HA-missing residues (opt-in) ──
     # Predicts phi/psi for HA-missing residues by mask-aware kNN over a
-    # secondary-shift reference whose distance drops the missing atom. On
-    # synthetically HA-stripped queries it beats the parametric head by a wide
-    # margin (docs/BENCHMARKS.md, ablation), but on the real 745-protein
-    # benchmark — including the 49 proteins with no HA at all — the default
-    # embedding-retrieval path is already better (9.6 deg median vs 10.7 deg
-    # with the fallback; High-tier share 65 % vs 38 %), so the fallback is
-    # off by default. See docs/BENCHMARKS.md section 6.
+    # secondary-shift reference whose distance drops the missing atom. It was
+    # built when the 0.3-era encoder collapsed on HA-stripped input; the 0.4.0
+    # encoder does not (docs/BENCHMARKS.md section 5), and on the benchmark's
+    # HA-free proteins the default path is more accurate than this fallback
+    # (9.6 deg median vs 11.0 deg; High-tier share 0.73 vs 0.45 — section 6).
+    # Kept off by default as an independent, learning-free cross-check.
     if mask_safe_fallback:
         ha_missing = masks[:, 1] < 0.5
         n_missing = int(ha_missing.sum())

@@ -67,10 +67,13 @@ def export_to_onnx(
     out = Path(onnx_path).resolve()
     out.parent.mkdir(parents=True, exist_ok=True)
 
-    config = FACETv3Config()
+    # Production configuration: the error head defines ``confidence``. Exporting
+    # with the default config silently swapped in the entropy fallback, so the
+    # ONNX confidence disagreed with the PyTorch path by up to ~2 units.
+    config = FACETv3Config(use_error_head=True)
     model = FACETv3(config)
     state = torch.load(checkpoint_path, map_location="cpu", weights_only=True)
-    model.load_state_dict(state, strict=False)
+    model.load_state_dict(state, strict=True)
     model.eval()
 
     wrapper = _FACETONNXWrapper(model)

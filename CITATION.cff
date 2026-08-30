@@ -6,7 +6,7 @@ abstract: >-
   FACET predicts protein backbone phi/psi torsion angles, secondary structure,
   chi1 rotamers and per-residue Ramachandran basin populations from backbone
   NMR chemical shifts, using a local-biased transformer with retrieval over a
-  220K-residue reference index. Outputs include XPLOR/CNS, CYANA and NEF
+  250K-residue reference index. Outputs include XPLOR/CNS, CYANA and NEF
   dihedral restraints.
 authors:
   - family-names: Zinke

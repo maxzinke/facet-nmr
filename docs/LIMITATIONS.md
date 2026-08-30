@@ -27,19 +27,17 @@ for how the numbers were obtained.
 
 ## Accuracy and coverage
 
-* **Hα-missing inputs are a measured, not a solved, case.** On the coverage-ablation
-  benchmark (Hα stripped from every residue of every query) the parametric head
-  degrades badly and the opt-in mask-safe fallback recovers full-coverage accuracy
-  (13.6° vs 13.6° median). On the real benchmark, however, the default
-  embedding-retrieval path is *better* than the fallback on Hα-missing residues,
-  including on the 49 clean-truth proteins with no Hα at all (9.6° median vs 10.7°).
-  The fallback is therefore off by default (`mask_safe_fallback=False`); it is a
-  different, simpler predictor (shift-space kNN with greedy clustering, no learned
-  representation) and should be switched on only when the default path visibly
-  fails on a sample.
+* **Hα-missing inputs are handled by input masking, not magic.** On the ablation
+  (Hα stripped from every residue of every query) the retrained parametric model loses
+  only ~0.2° (BENCHMARKS.md §5), and on the 75 benchmark proteins with no Hα at all
+  the default path scores 9.6° median — but sporadic gaps in otherwise complete
+  assignments are harder (13.4° on those residues), and extreme sparsity (H, HA and CB
+  all absent) costs measurably. The opt-in shift-space fallback
+  (`mask_safe_fallback=True`) is an independent cross-check, not a better predictor —
+  it trails the default on every measured slice.
 * **Losing Cβ costs ~0.5° median** on the same benchmark; losing C′ was not ablated
   separately.
-* **Coil is where FACET is least accurate** (20.9° median vs 8.0° helix and 14.6°
+* **Coil is where FACET is least accurate** (18.0° median vs 7.0° helix and 12.8°
   strand on the benchmark). The Low and Flexible tiers exist to keep those residues out
   of restraint files; do not override them with `--include-all` for structure
   calculation.
@@ -114,21 +112,18 @@ for how the numbers were obtained.
   training-run test set was 58.7 % with class-weighted training (g+ 56 %, g− 55 %,
   trans 66 %) — useful as a prior, not as a restraint.
 
-## Known defect in the shipped artifacts (fix in the next release)
+## A defect that was fixed before this release
 
-* **~12 % of the training targets were wrong.** Every single-model (X-ray) structure
-  in the data pipeline had its φ/ψ converted to radians twice, leaving values within
-  ±0.06 rad of zero: 36,237 of the training residues (11.7 %), all marked well-defined,
-  were therefore trained toward ≈ (0°, 0°). The model still reaches the numbers in
-  `docs/BENCHMARKS.md`, but it was trained against corrupt labels for one residue in
-  nine and should improve when retrained on the corrected pipeline.
-* **The shipped retrieval index carries 2,334 corrupt rows (1.1 %)** with φ/ψ ≈ 0; a
-  residue whose neighbours include them can be pulled toward the origin or lose its
-  cluster. **The shipped shift reference carries 36,237 corrupt rows (11.7 %)**, which
-  is one more reason the mask-safe fallback that reads it is opt-in.
-* **The benchmark's X-ray-truth residues (12.8 %) were scored against the same corrupt
-  values**; `docs/BENCHMARKS.md` §7 gives the validated correction and the corrected
-  tables. FACET is slightly behind TALOS-N on those residues after correction.
+Every single-model (X-ray) structure in the data pipeline had its φ/ψ converted to
+radians twice, leaving values within ±0.06 rad of zero. Discovered while preparing
+0.4.0, it had reached 11.7 % of the training targets, 1.1 % of the 0.3.x retrieval
+index, 11.7 % of the 0.3.x shift reference and the benchmark truth of 63 test entries.
+For 0.4.0 the truth was repaired and validated against the PDB files, the model was
+retrained, and the index and reference were rebuilt; `docs/BENCHMARKS.md` §7 records
+the defect, the correction and the before/after numbers. Residual caveat: the
+retrieval index now contains the X-ray rows that the 0.3.x clean-up had stripped, so
+its composition differs from the one the 0.3.x calibration was measured on — the tier
+calibration in the README is re-measured on the new index.
 
 ## Scope of the benchmark evidence
 
@@ -161,7 +156,7 @@ for how the numbers were obtained.
 * **PyTorch is a hard dependency** (`torch>=2.0`), even though inference needs only the
   encoder forward pass and the shipped ONNX file exists; an ONNX-only install path is
   not yet available.
-* Model weights and reference data (~125 MB) are downloaded on first use from the
+* Model weights and reference data (~155 MB) are downloaded on first use from the
   Hugging Face Hub and verified by SHA-256; an air-gapped install must pre-populate
   `$FACET_HOME` (`python -m facet.assets`). With `FACET_NO_DOWNLOAD=1` and no cached
   files, prediction fails (index) or degrades to the parametric head (shift

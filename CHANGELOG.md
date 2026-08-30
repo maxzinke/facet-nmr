@@ -8,15 +8,26 @@ versions follow [Semantic Versioning](https://semver.org/).
 First public release.
 
 ### Changed
+- **Retrained on repaired ground truth.** Every single-model (X-ray) structure in the
+  data pipeline had its φ/ψ converted to radians twice (11.7 % of the training
+  targets). The truth was repaired and validated against the PDB files (median
+  deviation 0.02°), the model retrained with the same recipe (best validation at
+  epoch 8 of 40; parametric test median 11.35° on the corrected truth), the retrieval
+  index rebuilt from the training split (253,573 rows, `index_version` v0.3.0 — the
+  33,770 X-ray rows stripped as "sentinels" in 0.2.0 were this same defect and are
+  valid again), and the shift reference rebuilt (near-origin rows 36,239 → 2). The
+  d2D-style parameters were refit and came out bit-identical, so they are unchanged.
+  All benchmark numbers were re-measured with the released package on the corrected
+  truth; the benchmark of record is now FACET 10.91° vs TALOS-N 11.58° median
+  (−0.67° [−0.78, −0.56]), fail25 18.0 % vs 20.3 %, win rate 53.8 %.
 - **The mask-safe shift-retrieval fallback is now opt-in** (`mask_safe_fallback=False`,
   CLI `--mask-safe-fallback`). Since 0.3.1 every residue without an HA shift — 21 % of
   the benchmark's residues — was routed to it. Re-running the 745-protein benchmark
   through the public `facet.predict()` path showed that this cost accuracy on every
-  slice, including the proteins with no HA at all (9.6° median with the default
-  embedding retrieval vs 10.7° with the fallback; High-tier share 65 % vs 38 %), and
-  that the 0.3.1 default did not reproduce the recorded benchmark (13.03° vs 12.65°).
-  With the fallback off the public path matches the record on 97.5 % of residues.
-  See docs/BENCHMARKS.md §6.
+  slice, including the proteins with no HA at all, and that the 0.3.1 default did not
+  reproduce the recorded benchmark. Re-verified with the 0.4.0 model: on the 75
+  benchmark proteins with no HA, the default path scores 9.6° median against 11.0°
+  with the fallback, at twice the High-tier coverage. See docs/BENCHMARKS.md §6.
 - **Mask-safe retrieval ranks candidates by query coverage before distance.** The
   scorer used a mean squared-z over the columns shared with the query, floored at two
   shared columns, so a reference row overlapping the query on only two atoms could
@@ -51,6 +62,11 @@ First public release.
   PyPI instead of vendoring it.
 
 ### Fixed
+- The ONNX export built the model without the error head and loaded the weights
+  non-strictly, so `facet_v3.onnx` reported the entropy fallback as `confidence` —
+  up to ~2 units away from the PyTorch path that the tiers are calibrated on. The
+  export now uses the production configuration; all five outputs agree with PyTorch
+  to < 1e-5.
 - `predict()` raised `NameError` instead of degrading to parametric mode when the
   retrieval index could not be found (the fresh-install path).
 - `$FACET_V3_PT`-style per-asset environment overrides were derived with a doubled
@@ -60,16 +76,10 @@ First public release.
   and skipped when they are absent.
 
 ### Known issues
-- Every single-model (X-ray) structure in the data pipeline had its φ/ψ converted to
-  radians twice. The benchmark truth for 63 entries (6,978 residues) has been
-  corrected and validated against the PDB files (`benchmarks/build_corrected_truth.py`;
-  the README table uses the corrected truth, 11.03° vs 11.51°, where the uncorrected
-  record read 12.65° vs 13.57°). The same defect affects 11.7 % of the training
-  targets, 1.1 % of the shipped retrieval index and 11.7 % of the shift reference;
-  see docs/LIMITATIONS.md. A retrained release on the fixed pipeline will follow.
-- 16 of the 740 benchmark entries have no TALOS-N prediction because TALOS-N 4.21
-  crashes on them (15 contain non-standard residue codes); they count against
-  TALOS-N's coverage and are excluded from the paired set.
+- 15 of the 739 scored benchmark entries (525 residues) have no TALOS-N prediction
+  because TALOS-N 4.21 crashes on them (14 of the 15 sequences contain non-standard
+  residue codes); they count against TALOS-N's coverage and are excluded from the
+  paired set.
 
 ## [0.3.1] — 2026-05-29
 

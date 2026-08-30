@@ -137,7 +137,7 @@ coverage-ablation subset (see [BENCHMARKS.md](BENCHMARKS.md)).
 | File | Built from | Rows | Depositions | Notes |
 |---|---|---|---|---|
 | `facet_v3.pt` / `facet_v3.onnx` | training split | — | — | encoder + heads, 1,293,378 parameters |
-| `facet_retrieval_index.npz` + `.entries.json` | training-split NG/XG well-defined residues | 219,713 | 3,439 | 128-d embeddings, φ, ψ, SS, basin, residue type; entry id per row in the sidecar |
+| `facet_retrieval_index.npz` + `.entries.json` | training-split NG/XG well-defined residues | 253,573 | 3,458 | 128-d embeddings, φ, ψ, SS, basin, residue type; entry id per row in the sidecar |
 | `facet_shift_reference.npz` | training-split residues with a defined angle | 310,923 | 3,470 | 18-d secondary-shift triplets with masks, φ, ψ, SS, residue-type triplet, BMRB entry and residue number |
 | `facet/data/ss_popn_params.npz` | 49,262 curated training-split residues (1,075 depositions) | — | — | per-(type, state, nucleus) means, σ, correlation, neighbour-context corrections |
 
@@ -149,7 +149,9 @@ None of the 745 test entries appears in the retrieval index or the shift referen
 * "Trained on ~5,000 proteins" describes the working set after quality control:
   **4,970 proteins / 448,819 residues**, of which the training split is
   **3,480 proteins / 316,445 residues** (validation 745 / 63,750; test 745 / 68,624).
-* The "220K-residue reference index" is 219,713 rows.
-* The 3,470 depositions in the shift reference versus 3,439 in the embedding index
+* The "250K-residue reference index" is 253,573 rows (the 0.3.x index had 219,713
+  because 33,770 X-ray rows with corrupt angles had been stripped; they are valid
+  again after the ground-truth repair).
+* The 3,470 depositions in the shift reference versus 3,458 in the embedding index
   differ because the index keeps only NG/XG well-defined residues while the reference
   keeps every residue with a defined angle.

@@ -38,18 +38,19 @@ save_nef_dihedral_restraint_list_1
       _nef_dihedral_restraint.lower_limit
       _nef_dihedral_restraint.upper_limit
 
-      1 1 . A 2 . C A 3 ILE N A 3 ILE CA A 3 ILE C PHI -67.2 -92.9 -41.5
-      2 1 . A 3 ILE N A 3 ILE CA A 3 ILE C A 4 . N PSI -35.0 -51.0 -18.9
-      3 2 . A 3 . C A 4 PHE N A 4 PHE CA A 4 PHE C PHI -69.5 -91.7 -47.4
-      4 2 . A 4 PHE N A 4 PHE CA A 4 PHE C A 5 . N PSI -40.2 -64.6 -15.8
-      5 3 . A 4 . C A 5 VAL N A 5 VAL CA A 5 VAL C PHI -69.1 -92.3 -45.9
-      6 3 . A 5 VAL N A 5 VAL CA A 5 VAL C A 6 . N PSI -35.4 -56.3 -14.6
-      7 4 . A 5 . C A 6 LYS N A 6 LYS CA A 6 LYS C PHI -65.0 -77.5 -52.5
-      8 4 . A 6 LYS N A 6 LYS CA A 6 LYS C A 7 . N PSI -35.3 -48.6 -21.9
-      9 5 . A 7 . C A 8 LEU N A 8 LEU CA A 8 LEU C PHI -61.3 -81.8 -40.9
-      10 5 . A 8 LEU N A 8 LEU CA A 8 LEU C A 9 . N PSI -44.9 -68.6 -21.2
-      11 6 . A 8 . C A 9 THR N A 9 THR CA A 9 THR C PHI -66.3 -86.9 -45.8
-      12 6 . A 9 THR N A 9 THR CA A 9 THR C A 10 . N PSI -33.4 -53.6 -13.2
+      1 1 . A 3 . C A 4 PHE N A 4 PHE CA A 4 PHE C PHI -72.1 -100.5 -43.7
+      2 1 . A 4 PHE N A 4 PHE CA A 4 PHE C A 5 . N PSI -33.7 -59.5 -8.0
+      3 2 . A 4 . C A 5 VAL N A 5 VAL CA A 5 VAL C PHI -67.5 -93.1 -41.9
+      4 2 . A 5 VAL N A 5 VAL CA A 5 VAL C A 6 . N PSI -41.0 -58.9 -23.1
+      5 3 . A 5 . C A 6 LYS N A 6 LYS CA A 6 LYS C PHI -66.0 -77.8 -54.2
+      6 3 . A 6 LYS N A 6 LYS CA A 6 LYS C A 7 . N PSI -39.4 -54.1 -24.8
+      7 4 . A 6 . C A 7 THR N A 7 THR CA A 7 THR C PHI -68.6 -88.6 -48.5
+      8 4 . A 7 THR N A 7 THR CA A 7 THR C A 8 . N PSI -36.4 -60.2 -12.5
+      9 5 . A 7 . C A 8 LEU N A 8 LEU CA A 8 LEU C PHI -62.1 -79.0 -45.1
+      10 5 . A 8 LEU N A 8 LEU CA A 8 LEU C A 9 . N PSI -41.4 -61.6 -21.1
+      11 6 . A 8 . C A 9 THR N A 9 THR CA A 9 THR C PHI -65.5 -83.4 -47.7
+      12 6 . A 9 THR N A 9 THR CA A 9 THR C A 10 . N PSI -34.8 -55.8 -13.8
+      13 7 . A 9 . C A 10 GLY N A 10 GLY CA A 10 GLY C PHI -65.8 -86.5 -45.0
 
    stop_
 save_

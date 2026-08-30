@@ -91,7 +91,10 @@ def main() -> None:
     ap.add_argument("--id-list", type=Path, default=HERE / "data" / "test_set_745.txt")
     ap.add_argument("--talosn-dir", type=Path, help="<dir>/<id>/pred.tab; not redistributed")
     ap.add_argument("--out", type=Path, default=HERE / "results" / "talosn_clean" / "per_residue_rerun.csv")
-    ap.add_argument("--no-fallback", action="store_true", help="disable the mask-safe fallback")
+    ap.add_argument("--mask-safe-fallback", action="store_true",
+                    help="enable the opt-in mask-safe shift-retrieval fallback (off by default, "
+                         "matching facet.predict)")
+    ap.add_argument("--no-fallback", action="store_true", help=argparse.SUPPRESS)  # legacy no-op
     args = ap.parse_args()
 
     from facet import predict
@@ -117,7 +120,7 @@ def main() -> None:
             print(f"  {eid}: no input file, skipped")
             continue
         try:
-            res = predict(tab, mask_safe_fallback=not args.no_fallback)
+            res = predict(tab, mask_safe_fallback=bool(args.mask_safe_fallback))
         except Exception as exc:  # noqa: BLE001 — report and keep going
             print(f"  {eid}: FACET failed: {exc}")
             continue

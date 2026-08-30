@@ -9,7 +9,7 @@ benchmark sets see [benchmarks/](benchmarks/).
 | File | Where | What it is | Source | Licence |
 |---|---|---|---|---|
 | `facet_v3.pt`, `facet_v3.onnx` | HF `SiXa18/facet-weights` | Trained encoder + heads (1.29 M parameters) | Trained by this project on BMRB + PDB | CC BY 4.0 |
-| `facet_retrieval_index.npz` | HF | 219,713 × 128-d learned embeddings with φ/ψ, DSSP state, basin and residue type, from 3,439 training-split depositions | Embeddings from this project's encoder; φ/ψ from the PDB | CC BY 4.0 |
+| `facet_retrieval_index.npz` | HF | 253,573 × 128-d learned embeddings with φ/ψ, secondary-structure state, basin and residue type, from 3,458 training-split depositions | Embeddings from this project's encoder; φ/ψ from the PDB | CC BY 4.0 |
 | `facet_retrieval_index.entries.json` | HF | BMRB deposition ID for every index row | BMRB | CC0 (identifiers) |
 | `facet_shift_reference.npz` | HF (optional) | 310,923 per-residue secondary-shift rows with deposition and residue IDs, from 3,470 depositions; backs the mask-safe fallback | BMRB | CC0 (data) — packaged file CC BY 4.0 |
 | `facet/data/ss_popn_params.npz` | in the wheel | Per-residue-type Gaussian parameters of the d2D-style engine, fit on 49,262 curated residues | Fitted by this project | CC BY 4.0 |

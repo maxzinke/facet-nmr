@@ -4,8 +4,8 @@ WHY THESE ARE NOT IN THE WHEEL
 ------------------------------
 Two independent reasons, either of which would be sufficient.
 
-**Packaging.** ``facet_retrieval_index.npz`` is 106 MB on its own, and PyPI rejects
-any file over 100 MB. A wheel with the weights bundled measures 127.5 MB and cannot be
+**Packaging.** ``facet_retrieval_index.npz`` is 133 MB on its own, and PyPI rejects
+any file over 100 MB. A wheel with the weights bundled measures ~155 MB and cannot be
 uploaded at all. Downloading them separately is not an optimisation here; it is the
 only way to publish.
 
@@ -61,27 +61,27 @@ class Asset:
 #: not the one the numbers in the README were measured on.
 ASSETS: dict[str, Asset] = {
     "facet_v3.pt": Asset(
-        sha256="72efc688afa7ee4d79a3a34f974d283008a31c811bb91390a0c4591dbac1f058",
-        size=5_205_878,
+        sha256="d117fd39fa70b6f9d303c5c8cd447821bf88e6a7f32394ef250a6c8460d48cf0",
+        size=5_206_151,
     ),
     "facet_v3.onnx": Asset(
-        sha256="1082de2422b1fe4ad0f59b5063f92db16e6dc6447cc220df8d1e05575edc004a",
-        size=5_157_366,
+        sha256="ee457594f60c797dd5bffb0343d365ca997b9b120818b3c131c28760244a1913",
+        size=5_192_115,
     ),
     "facet_retrieval_index.npz": Asset(
-        sha256="9bbed45d3fe4fffeae78727ca8c79b34373a702c822d9dfa1151ac56c7df0022",
-        size=105_969_730,
+        sha256="0efaccea5fb1af33fc56acd2f292563c9a0aee4e7246df70d2197a2d441371a4",
+        size=132_621_033,
     ),
     "facet_retrieval_index.entries.json": Asset(
-        sha256="2c2ba483c88e4f98ef969369b34276fdeeab60793a67d4ec783d2bc541e47d92",
-        size=1_962_146,
+        sha256="12bd59518f30bd2dc4e9745f0341e78e605e9214854399294e199d6846cef53a",
+        size=2_265_272,
     ),
     # The mask-safe fallback still works when this is absent -- predictions for
     # HA-missing residues fall back to the parametric head, with a warning -- so it is
     # marked optional rather than blocking a prediction run.
     "facet_shift_reference.npz": Asset(
-        sha256="07aefdc79863e728f77b2ded8fce0baa366288692c1b3e71c4585e389ba1bb76",
-        size=9_639_464,
+        sha256="537119cc6679571fca087c091b9a04d4254c8b05ef762a86c031895ef9b0805e",
+        size=9_620_268,
         optional=True,
     ),
 }
@@ -89,7 +89,7 @@ ASSETS: dict[str, Asset] = {
 #: Where the artifacts are published.
 #:
 #: A HuggingFace model repository rather than a GitHub release: it is built for model
-#: weights, CDN-backed, and a 106 MB file is unremarkable there. The ``resolve`` URL
+#: weights, CDN-backed, and a 133 MB file is unremarkable there. The ``resolve`` URL
 #: form serves raw file bytes over plain HTTP, so nothing here needs the
 #: ``huggingface_hub`` package — this module depends only on the standard library.
 #:

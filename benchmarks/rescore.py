@@ -47,6 +47,15 @@ def load(path: Path, rerun: bool = False, corrected_truth: bool = False) -> dict
     if not rows:
         raise SystemExit(f"{path} is empty")
 
+    # The canonical 0.4.0 table stores truth that is ALREADY corrected
+    # (truth_corrected=1). Rescaling it again would corrupt the flagged rows.
+    if corrected_truth and rows[0].get("truth_corrected") == "1":
+        raise SystemExit(
+            "--corrected-truth refused: this table's ground truth is already "
+            "corrected (truth_corrected=1). The flag exists for the archived "
+            "0.3-era tables; see docs/BENCHMARKS.md section 7."
+        )
+
     def col(name, conv):
         return np.array([conv(r[name]) if r[name] != "" else np.nan for r in rows])
 
@@ -382,14 +391,22 @@ def main() -> None:
                     help="rescale flagged ground truth by 180/pi and re-derive both errors "
                          "from stored angles (needs a run_talosn_comparison.py output)")
     args = ap.parse_args()
+    import csv as _csv
+    with open(args.csv, newline="") as _fh:
+        _first = next(_csv.DictReader(_fh), {})
+    rows0_truth_corrected = _first.get("truth_corrected") == "1"
     d = load(args.csv, rerun=args.rerun, corrected_truth=args.corrected_truth)
     n_sus = int(d["suspect"].sum())
     if args.exclude_suspect:
         d = drop_suspect(d)
         print(f"[excluded {n_sus:,} residues flagged truth_units_suspect]\n")
     elif n_sus and not args.corrected_truth:
-        print(f"[note: {n_sus:,} residues are flagged truth_units_suspect and are INCLUDED below; "
-              f"see --exclude-suspect / --corrected-truth and docs/BENCHMARKS.md §7]\n")
+        if rows0_truth_corrected:
+            print(f"[note: {n_sus:,} residues carry the truth_units_suspect flag for provenance; "
+                  f"their ground truth is already corrected in this table (truth_corrected=1)]\n")
+        else:
+            print(f"[note: {n_sus:,} residues are flagged truth_units_suspect and are INCLUDED below; "
+                  f"see --exclude-suspect / --corrected-truth and docs/BENCHMARKS.md §7]\n")
     elif args.corrected_truth:
         print(f"[ground truth rescaled for {n_sus:,} flagged residues; both errors re-derived from stored angles]\n")
     t = table(d)

@@ -12,31 +12,31 @@
       "retrieval": {
         "overall": {
           "n": 3404,
-          "median": 15.56,
-          "mean": 30.12,
-          "fail25": 32.2
+          "median": 14.01,
+          "mean": 23.96,
+          "fail25": 25.1
         },
         "helix": {
           "n": 1124,
-          "median": 10.59,
-          "mean": 19.47,
-          "fail25": 18.1
+          "median": 9.53,
+          "mean": 14.63,
+          "fail25": 9.5
         },
         "strand": {
           "n": 997,
-          "median": 14.45,
-          "mean": 26.33,
-          "fail25": 22.1
+          "median": 13.82,
+          "mean": 17.9,
+          "fail25": 15.9
         },
         "coil": {
           "n": 1283,
-          "median": 26.61,
-          "mean": 42.39,
-          "fail25": 52.5
+          "median": 22.51,
+          "mean": 36.84,
+          "fail25": 45.8
         },
         "confidence": {
-          "strong": 401,
-          "good": 2475,
+          "strong": 838,
+          "good": 2038,
           "weak": 522,
           "insufficient": 6
         }
@@ -44,27 +44,53 @@
       "masked_module": {
         "overall": {
           "n": 3404,
-          "median": 13.61,
-          "mean": 22.27,
-          "fail25": 22.2
+          "median": 12.97,
+          "mean": 20.14,
+          "fail25": 19.1
         },
         "helix": {
           "n": 1124,
-          "median": 9.84,
-          "mean": 15.81,
-          "fail25": 12.6
+          "median": 9.09,
+          "mean": 12.8,
+          "fail25": 6.6
         },
         "strand": {
           "n": 997,
-          "median": 13.56,
-          "mean": 16.81,
-          "fail25": 11.8
+          "median": 13.33,
+          "mean": 15.2,
+          "fail25": 10.8
         },
         "coil": {
           "n": 1283,
-          "median": 19.59,
-          "mean": 32.17,
-          "fail25": 38.7
+          "median": 19.21,
+          "mean": 30.41,
+          "fail25": 36.5
+        }
+      },
+      "parametric": {
+        "overall": {
+          "n": 3404,
+          "median": 12.45,
+          "mean": 18.49,
+          "fail25": 16.6
+        },
+        "helix": {
+          "n": 1124,
+          "median": 9.03,
+          "mean": 12.34,
+          "fail25": 5.5
+        },
+        "strand": {
+          "n": 997,
+          "median": 12.58,
+          "mean": 14.45,
+          "fail25": 10.0
+        },
+        "coil": {
+          "n": 1283,
+          "median": 17.39,
+          "mean": 27.02,
+          "fail25": 31.4
         }
       }
     },
@@ -72,31 +98,31 @@
       "retrieval": {
         "overall": {
           "n": 3404,
-          "median": 17.81,
-          "mean": 34.0,
-          "fail25": 37.9
+          "median": 15.85,
+          "mean": 28.95,
+          "fail25": 32.4
         },
         "helix": {
           "n": 1124,
-          "median": 11.66,
-          "mean": 23.3,
-          "fail25": 22.8
+          "median": 10.38,
+          "mean": 20.15,
+          "fail25": 16.2
         },
         "strand": {
           "n": 997,
-          "median": 16.53,
-          "mean": 31.07,
-          "fail25": 30.2
+          "median": 15.12,
+          "mean": 23.08,
+          "fail25": 24.2
         },
         "coil": {
           "n": 1283,
-          "median": 29.64,
-          "mean": 45.65,
-          "fail25": 57.1
+          "median": 26.69,
+          "mean": 41.22,
+          "fail25": 52.9
         },
         "confidence": {
-          "strong": 226,
-          "good": 2415,
+          "strong": 377,
+          "good": 2264,
           "weak": 744,
           "insufficient": 19
         }
@@ -104,27 +130,53 @@
       "masked_module": {
         "overall": {
           "n": 3404,
-          "median": 13.64,
-          "mean": 23.0,
-          "fail25": 23.6
+          "median": 13.02,
+          "mean": 20.31,
+          "fail25": 19.5
         },
         "helix": {
           "n": 1124,
-          "median": 9.81,
-          "mean": 15.76,
-          "fail25": 12.6
+          "median": 9.14,
+          "mean": 12.63,
+          "fail25": 6.0
         },
         "strand": {
           "n": 997,
-          "median": 13.7,
-          "mean": 18.04,
-          "fail25": 14.0
+          "median": 13.34,
+          "mean": 15.67,
+          "fail25": 11.7
         },
         "coil": {
           "n": 1283,
-          "median": 19.66,
-          "mean": 33.2,
-          "fail25": 40.7
+          "median": 19.18,
+          "mean": 30.65,
+          "fail25": 37.5
+        }
+      },
+      "parametric": {
+        "overall": {
+          "n": 3404,
+          "median": 12.51,
+          "mean": 18.78,
+          "fail25": 17.1
+        },
+        "helix": {
+          "n": 1124,
+          "median": 8.97,
+          "mean": 12.08,
+          "fail25": 5.6
+        },
+        "strand": {
+          "n": 997,
+          "median": 12.6,
+          "mean": 14.83,
+          "fail25": 10.0
+        },
+        "coil": {
+          "n": 1283,
+          "median": 17.57,
+          "mean": 27.72,
+          "fail25": 32.6
         }
       }
     },
@@ -132,31 +184,31 @@
       "retrieval": {
         "overall": {
           "n": 3404,
-          "median": 17.87,
-          "mean": 35.56,
-          "fail25": 37.9
+          "median": 15.36,
+          "mean": 27.32,
+          "fail25": 29.5
         },
         "helix": {
           "n": 1124,
-          "median": 11.66,
-          "mean": 22.67,
-          "fail25": 22.4
+          "median": 10.28,
+          "mean": 18.15,
+          "fail25": 13.1
         },
         "strand": {
           "n": 997,
-          "median": 17.41,
-          "mean": 36.03,
-          "fail25": 33.1
+          "median": 15.12,
+          "mean": 21.58,
+          "fail25": 23.0
         },
         "coil": {
           "n": 1283,
-          "median": 28.73,
-          "mean": 46.47,
-          "fail25": 55.1
+          "median": 24.44,
+          "mean": 39.81,
+          "fail25": 48.9
         },
         "confidence": {
-          "strong": 294,
-          "good": 2386,
+          "strong": 580,
+          "good": 2100,
           "weak": 710,
           "insufficient": 14
         }
@@ -164,27 +216,53 @@
       "masked_module": {
         "overall": {
           "n": 3404,
-          "median": 13.57,
-          "mean": 22.76,
-          "fail25": 23.3
+          "median": 12.95,
+          "mean": 20.84,
+          "fail25": 20.6
         },
         "helix": {
           "n": 1124,
-          "median": 9.68,
-          "mean": 15.83,
-          "fail25": 13.3
+          "median": 9.06,
+          "mean": 12.87,
+          "fail25": 7.3
         },
         "strand": {
           "n": 997,
-          "median": 13.62,
-          "mean": 17.25,
-          "fail25": 11.7
+          "median": 13.36,
+          "mean": 15.67,
+          "fail25": 11.1
         },
         "coil": {
           "n": 1283,
-          "median": 20.17,
-          "mean": 33.1,
-          "fail25": 41.2
+          "median": 19.31,
+          "mean": 31.83,
+          "fail25": 39.7
+        }
+      },
+      "parametric": {
+        "overall": {
+          "n": 3404,
+          "median": 12.59,
+          "mean": 19.35,
+          "fail25": 18.0
+        },
+        "helix": {
+          "n": 1124,
+          "median": 9.0,
+          "mean": 12.13,
+          "fail25": 5.2
+        },
+        "strand": {
+          "n": 997,
+          "median": 12.8,
+          "mean": 15.34,
+          "fail25": 12.0
+        },
+        "coil": {
+          "n": 1283,
+          "median": 18.11,
+          "mean": 28.79,
+          "fail25": 33.9
         }
       }
     },
@@ -192,31 +270,31 @@
       "retrieval": {
         "overall": {
           "n": 3404,
-          "median": 22.89,
-          "mean": 42.22,
-          "fail25": 47.2
+          "median": 19.47,
+          "mean": 36.51,
+          "fail25": 41.0
         },
         "helix": {
           "n": 1124,
-          "median": 13.84,
-          "mean": 29.26,
-          "fail25": 31.0
+          "median": 12.18,
+          "mean": 24.78,
+          "fail25": 22.3
         },
         "strand": {
           "n": 997,
-          "median": 25.32,
-          "mean": 47.34,
-          "fail25": 50.4
+          "median": 20.96,
+          "mean": 38.17,
+          "fail25": 43.5
         },
         "coil": {
           "n": 1283,
-          "median": 34.55,
-          "mean": 49.6,
-          "fail25": 59.0
+          "median": 29.67,
+          "mean": 45.49,
+          "fail25": 55.3
         },
         "confidence": {
-          "strong": 120,
-          "good": 2259,
+          "strong": 158,
+          "good": 2221,
           "weak": 1000,
           "insufficient": 25
         }
@@ -224,27 +302,53 @@
       "masked_module": {
         "overall": {
           "n": 3404,
-          "median": 13.42,
-          "mean": 22.64,
-          "fail25": 22.8
+          "median": 12.78,
+          "mean": 20.15,
+          "fail25": 19.4
         },
         "helix": {
           "n": 1124,
-          "median": 9.58,
-          "mean": 15.91,
-          "fail25": 12.7
+          "median": 8.93,
+          "mean": 12.76,
+          "fail25": 6.6
         },
         "strand": {
           "n": 997,
-          "median": 13.64,
-          "mean": 17.5,
-          "fail25": 12.8
+          "median": 13.34,
+          "mean": 15.64,
+          "fail25": 11.3
         },
         "coil": {
           "n": 1283,
-          "median": 19.18,
-          "mean": 32.52,
-          "fail25": 39.3
+          "median": 18.81,
+          "mean": 30.14,
+          "fail25": 36.9
+        }
+      },
+      "parametric": {
+        "overall": {
+          "n": 3404,
+          "median": 12.7,
+          "mean": 19.69,
+          "fail25": 18.2
+        },
+        "helix": {
+          "n": 1124,
+          "median": 8.93,
+          "mean": 12.49,
+          "fail25": 5.7
+        },
+        "strand": {
+          "n": 997,
+          "median": 13.05,
+          "mean": 15.64,
+          "fail25": 12.2
+        },
+        "coil": {
+          "n": 1283,
+          "median": 18.17,
+          "mean": 29.14,
+          "fail25": 33.8
         }
       }
     },
@@ -252,31 +356,31 @@
       "retrieval": {
         "overall": {
           "n": 3404,
-          "median": 17.41,
-          "mean": 34.44,
-          "fail25": 37.7
+          "median": 14.97,
+          "mean": 26.96,
+          "fail25": 29.6
         },
         "helix": {
           "n": 1124,
-          "median": 11.17,
-          "mean": 22.68,
-          "fail25": 22.6
+          "median": 9.93,
+          "mean": 17.13,
+          "fail25": 12.7
         },
         "strand": {
           "n": 997,
-          "median": 16.39,
-          "mean": 33.54,
-          "fail25": 30.9
+          "median": 14.81,
+          "mean": 20.97,
+          "fail25": 21.9
         },
         "coil": {
           "n": 1283,
-          "median": 29.53,
-          "mean": 45.43,
-          "fail25": 56.2
+          "median": 25.37,
+          "mean": 40.24,
+          "fail25": 50.4
         },
         "confidence": {
-          "strong": 317,
-          "good": 2465,
+          "strong": 578,
+          "good": 2204,
           "weak": 609,
           "insufficient": 13
         }
@@ -284,27 +388,53 @@
       "masked_module": {
         "overall": {
           "n": 3404,
-          "median": 14.05,
-          "mean": 23.15,
-          "fail25": 23.7
+          "median": 13.42,
+          "mean": 21.28,
+          "fail25": 21.0
         },
         "helix": {
           "n": 1124,
-          "median": 9.94,
-          "mean": 16.36,
-          "fail25": 13.5
+          "median": 9.3,
+          "mean": 13.32,
+          "fail25": 7.4
         },
         "strand": {
           "n": 997,
-          "median": 13.8,
-          "mean": 17.65,
-          "fail25": 13.2
+          "median": 13.4,
+          "mean": 15.99,
+          "fail25": 12.7
         },
         "coil": {
           "n": 1283,
-          "median": 20.54,
-          "mean": 33.38,
-          "fail25": 40.8
+          "median": 19.9,
+          "mean": 32.36,
+          "fail25": 39.4
+        }
+      },
+      "parametric": {
+        "overall": {
+          "n": 3404,
+          "median": 12.92,
+          "mean": 19.33,
+          "fail25": 18.5
+        },
+        "helix": {
+          "n": 1124,
+          "median": 9.08,
+          "mean": 12.3,
+          "fail25": 5.7
+        },
+        "strand": {
+          "n": 997,
+          "median": 13.39,
+          "mean": 15.62,
+          "fail25": 12.4
+        },
+        "coil": {
+          "n": 1283,
+          "median": 18.0,
+          "mean": 28.37,
+          "fail25": 34.4
         }
       }
     },
@@ -312,31 +442,31 @@
       "retrieval": {
         "overall": {
           "n": 3404,
-          "median": 24.15,
-          "mean": 41.89,
-          "fail25": 49.0
+          "median": 21.34,
+          "mean": 37.28,
+          "fail25": 43.8
         },
         "helix": {
           "n": 1124,
-          "median": 13.23,
-          "mean": 27.93,
-          "fail25": 28.5
+          "median": 11.94,
+          "mean": 24.26,
+          "fail25": 21.7
         },
         "strand": {
           "n": 997,
-          "median": 27.74,
-          "mean": 46.07,
-          "fail25": 54.8
+          "median": 24.72,
+          "mean": 39.01,
+          "fail25": 49.3
         },
         "coil": {
           "n": 1283,
-          "median": 37.26,
-          "mean": 50.87,
-          "fail25": 62.4
+          "median": 33.04,
+          "mean": 47.34,
+          "fail25": 58.9
         },
         "confidence": {
-          "strong": 167,
-          "good": 2244,
+          "strong": 185,
+          "good": 2226,
           "weak": 966,
           "insufficient": 27
         }
@@ -344,27 +474,53 @@
       "masked_module": {
         "overall": {
           "n": 3404,
-          "median": 14.08,
-          "mean": 24.66,
-          "fail25": 25.7
+          "median": 13.52,
+          "mean": 22.04,
+          "fail25": 22.6
         },
         "helix": {
           "n": 1124,
-          "median": 9.92,
-          "mean": 16.61,
-          "fail25": 13.5
+          "median": 9.29,
+          "mean": 13.28,
+          "fail25": 7.2
         },
         "strand": {
           "n": 997,
-          "median": 14.47,
-          "mean": 20.06,
-          "fail25": 16.9
+          "median": 14.32,
+          "mean": 17.53,
+          "fail25": 15.5
         },
         "coil": {
           "n": 1283,
-          "median": 21.47,
-          "mean": 35.29,
-          "fail25": 43.2
+          "median": 20.54,
+          "mean": 33.22,
+          "fail25": 41.5
+        }
+      },
+      "parametric": {
+        "overall": {
+          "n": 3404,
+          "median": 13.2,
+          "mean": 21.95,
+          "fail25": 21.6
+        },
+        "helix": {
+          "n": 1124,
+          "median": 8.93,
+          "mean": 12.24,
+          "fail25": 6.0
+        },
+        "strand": {
+          "n": 997,
+          "median": 14.15,
+          "mean": 19.05,
+          "fail25": 17.1
+        },
+        "coil": {
+          "n": 1283,
+          "median": 18.79,
+          "mean": 32.69,
+          "fail25": 38.8
         }
       }
     }

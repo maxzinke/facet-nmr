@@ -69,7 +69,7 @@ Changelog = "https://github.com/maxzinke/facet-nmr/blob/main/CHANGELOG.md"
 packages = ["facet"]
 
 # Large artifacts are NOT shipped in the wheel. facet_retrieval_index.npz alone is
-# 106 MB and PyPI rejects any file over 100 MB, so a bundled wheel (127.5 MB) cannot
+# 133 MB and PyPI rejects any file over 100 MB, so a bundled wheel (~155 MB) cannot
 # be uploaded at all. facet/assets.py downloads them into ~/.facet on first use and
 # verifies each against a pinned SHA-256.
 #

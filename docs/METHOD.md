@@ -23,7 +23,7 @@ top of it:
 2. **Parametric heads** on that embedding predict a 36×36 Ramachandran distribution
    plus a within-bin residual, the SS class, the χ1 class, and an expected error.
 3. **Retrieval-augmented φ/ψ** (the default): the embedding is used as a query
-   against an index of 219,713 training-residue embeddings; the neighbours' φ/ψ are
+   against an index of 253,573 training-residue embeddings; the neighbours' φ/ψ are
    clustered and the dominant cluster becomes the prediction, its agreement becomes
    the confidence tier (`facet/retrieval.py`).
 4. **A mask-safe shift-retrieval fallback** (opt-in, `mask_safe_fallback=True`) can
@@ -139,12 +139,12 @@ mode.
 
 ## 4. Training
 
-Training was run in the training repository with `scripts/train_facet_v3.py`. The
-shipped weights are byte-identical (SHA-256) to the checkpoint
-`facet_v3_ng_xg_conf_chi1_best.pt` from that run. The values below are taken from the
-script defaults and the run record; flags are inferred from the checkpoint name and its
-contents (it contains the expected-error head; χ1 class weights are recorded in the
-training notes).
+Training was run in the training repository with
+`scripts/train_facet_v3.py --include-xg --aux-error-head --chi1-class-weight` on
+2026-08-30, after the φ/ψ ground truth of every single-model structure had been
+repaired (see [BENCHMARKS.md §7](BENCHMARKS.md)); the shipped weights are
+byte-identical (SHA-256 `d117fd39…`) to `facet_v3_ng_xg_conf_chi1_v2_best.pt` from
+that run. The values below are taken from the script defaults and the run record.
 
 | Item | Value |
 |---|---|
@@ -157,7 +157,7 @@ training notes).
 | Dropout | 0.1 in every block |
 | Atom dropout | each of the 6 nuclei zeroed with p = 0.10 per window (≥ 2 kept) |
 | Context dropout | each non-centre window position zeroed with p = 0.15 |
-| Model selection | lowest validation coarse-grid cross-entropy (3.680 for the shipped model) |
+| Model selection | lowest validation coarse-grid cross-entropy (3.879 at epoch 8 of 40 for the shipped model; 49.8 min on one RTX 4080 SUPER) |
 
 **Objective** (`facet/model.py::facet_v3_loss`), summed over valid residues:
 
@@ -175,9 +175,9 @@ The expected-error target is the RMS angular error of the *decoded* (coarse + fi
 prediction, computed with the gradient detached so the confidence head cannot leak into
 the torsion head.
 
-**Held-out result of the parametric model** (training-run record, 55,036 test
-residues, RMS-of-(Δφ,Δψ) metric used inside the training script — not the benchmark
-metric): median 13.81°, fail25 36.0 %, SS Q3 86.3 %. The retrieval path described next
+**Held-out result of the parametric model** (training-run record, 55,108 test
+residues with corrected truth, RMS-of-(Δφ,Δψ) metric used inside the training script):
+median 11.35°, fail25 19.4 %, SS Q3 86.3 %. The retrieval path described next
 is what the README numbers refer to; see [BENCHMARKS.md](BENCHMARKS.md) for the metric
 definitions and the like-for-like comparison.
 
@@ -189,9 +189,9 @@ definitions and the like-for-like comparison.
 (the same NG/XG, well-defined set used as training targets), the encoder embedding
 **h** — taken *before* SS conditioning — is stored with the residue's φ, ψ, SS label,
 Ramachandran basin, residue type and source entry. The shipped index
-(`facet_retrieval_index.npz`, version `v0.2.1`) holds **219,713** rows from
-**3,439** BMRB entries: 95,149 H / 50,209 E / 74,355 C by SS label; 113,057 α_R /
-62,554 β / 26,393 PPII / 17,709 other by basin. No validation or test protein is in the
+(`facet_retrieval_index.npz`, version `v0.3.0`) holds **253,573** rows from
+**3,458** BMRB entries: 109,664 H / 57,925 E / 85,984 C by SS label; 130,630 α_R /
+72,752 β / 31,229 PPII / 18,962 other by basin. No validation or test protein is in the
 index (verified: 0 of the 745 benchmark entries; see BENCHMARKS.md).
 
 **Query.** The query residue's embedding is L2-normalised and compared to all index
@@ -242,21 +242,23 @@ residue type, φ/ψ, SS, basin and cosine similarity, and all 25 can be exported
 `facet/masked_retrieval.py`, **opt-in** (`mask_safe_fallback=True`, CLI
 `--mask-safe-fallback`) and applied only to residues whose Hα is unobserved.
 
-*Why it exists.* The encoder was trained with Hα present ~80 % of the time. On the
-coverage-ablation benchmark, where Hα is stripped from every query, the parametric
-head degrades badly and this shift-space retrieval holds full-coverage accuracy
-(BENCHMARKS.md §5).
+*Why it exists.* The 0.3-era encoder, trained when 11.7 % of its targets were corrupt
+(BENCHMARKS.md §7), degraded badly when Hα was stripped from every query, and this
+shift-space retrieval held full-coverage accuracy. The 0.4.0 encoder no longer shows
+that fragility — on the same ablation the parametric model now beats the fallback in
+every scenario (BENCHMARKS.md §5) — so the fallback survives as an independent,
+learning-free cross-check rather than a rescue path.
 
 *Why it is off by default.* On the real 745-protein benchmark the default
-embedding-retrieval path (§5) is already more accurate on Hα-missing residues than
-the fallback — including on the 49 clean-truth proteins that have **no Hα shifts at
-all**, where the default path scores 9.6° median (TALOS-N 10.1°) against 10.7° with the
-fallback, and keeps 65 % of residues in the High tier against 38 %. Sporadic Hα gaps
-inside an otherwise assigned window are handled by the encoder's input masking; the
-ablation's whole-protein stripping is a harder case than real data presents. Routing
-every Hα-missing residue to the fallback, as version 0.3.1 did, therefore cost
-accuracy and High-tier coverage (BENCHMARKS.md §6). The fallback remains available
-for inputs where the encoder path visibly fails.
+embedding-retrieval path (§5) is more accurate on Hα-missing residues than the
+fallback — measured with the 0.4.0 model and the rebuilt reference on the 75 proteins
+that have **no Hα shifts at all**: 9.6° median (TALOS-N 10.3°) against 11.0° with the
+fallback, with 73 % of residues in the High tier against 45 %
+(BENCHMARKS.md §6). Sporadic Hα gaps inside an otherwise assigned window are handled
+by the encoder's input masking; the ablation's whole-protein stripping is a harder
+case than real data presents. Routing every Hα-missing residue to the fallback, as
+version 0.3.1 did, cost accuracy and High-tier coverage. The fallback remains
+available for inputs where the encoder path visibly fails.
 
 **Reference.** `facet_shift_reference.npz` holds one row per training-split residue with
 a defined angle: **310,923** rows from **3,470** depositions. Each row is the

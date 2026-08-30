@@ -10,7 +10,7 @@ small fix so the approach can be agreed before you invest in it.
 git clone https://github.com/maxzinke/facet-nmr
 cd facet-nmr
 pip install -e ".[dev]"
-python -m facet.assets      # download weights + retrieval index into ~/.facet (~125 MB)
+python -m facet.assets      # download weights + retrieval index into ~/.facet (~155 MB)
 pytest
 ```
 

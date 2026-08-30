@@ -1,6 +1,6 @@
 """Publish the model weights to the HuggingFace Hub repository FACET downloads from.
 
-The wheel does not contain these files: ``facet_retrieval_index.npz`` alone is 106 MB
+The wheel does not contain these files: ``facet_retrieval_index.npz`` alone is 133 MB
 and PyPI rejects anything over 100 MB, so ``facet/assets.py`` fetches them on first
 use instead. This script is what puts them where it looks.
 
@@ -54,7 +54,7 @@ them by hand. `facet/assets.py` resolves them into `~/.facet/` and verifies each
 against a pinned SHA-256.
 
 They live here rather than in the Python wheel because `facet_retrieval_index.npz` is
-106 MB, past PyPI's 100 MB per-file limit; a bundled wheel could not be uploaded at
+133 MB, past PyPI's 100 MB per-file limit; a bundled wheel could not be uploaded at
 all. Hosting them separately also means a corrected BMRB entry can reach users without
 a new package release.
 
@@ -64,7 +64,7 @@ a new package release.
 |---|---|---|
 | `facet_v3.pt` | 5.2 MB | Encoder weights (PyTorch) |
 | `facet_v3.onnx` | 5.2 MB | The same encoder, ONNX |
-| `facet_retrieval_index.npz` | 106.0 MB | 220K residue embeddings with phi/psi and labels |
+| `facet_retrieval_index.npz` | 132.6 MB | 254K residue embeddings with phi/psi and labels |
 | `facet_retrieval_index.entries.json` | 2.0 MB | Per-row source identifiers |
 | `facet_shift_reference.npz` | 9.6 MB | Mask-safe retrieval reference (optional; absence degrades to the parametric head) |
 

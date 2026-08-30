@@ -8,7 +8,7 @@ version = "0.4.0"
 description = "Retrieval-augmented prediction of backbone torsion angles, secondary structure, and Ramachandran basin populations from NMR chemical shifts"
 readme = "README.md"
 license = "MIT"
-license-files = ["LICENSE"]
+license-files = ["LICENSE", "LICENSE-WEIGHTS"]
 requires-python = ">=3.10"
 authors = [
     { name = "Maximilian Zinke", email = "maximilian.zinke@gmail.com" },

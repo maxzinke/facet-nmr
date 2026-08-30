@@ -151,7 +151,7 @@ header.
 ## Licence
 
 Code: [MIT](LICENSE). Model weights, retrieval index, shift reference and fitted
-parameters: [CC BY 4.0](LICENSE). They derive from the PDB and the BMRB, both CC0 —
+parameters: [CC BY 4.0](LICENSE-WEIGHTS). They derive from the PDB and the BMRB, both CC0 —
 please also cite BMRB: Hoch *et al.*, *Nucleic Acids Res.* **51**, D368 (2023),
 [10.1093/nar/gkac1050](https://doi.org/10.1093/nar/gkac1050).
 

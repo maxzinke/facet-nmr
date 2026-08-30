@@ -1,0 +1,17 @@
+Licence for model weights and reference data
+
+Model weights, the retrieval index, the shift reference and the fitted
+parameters (the files listed in DATA_PROVENANCE.md, distributed from
+https://huggingface.co/SiXa18/facet-weights and under facet/data/) are
+copyright (c) 2026 Maximilian Zinke and are licensed under the
+Creative Commons Attribution 4.0 International licence (CC BY 4.0),
+https://creativecommons.org/licenses/by/4.0/. You may use, redistribute and
+build on them for any purpose, including commercially, provided you credit
+this project (see CITATION.cff).
+
+The structural data they derive from come from the Protein Data Bank and the
+chemical-shift data from the Biological Magnetic Resonance Data Bank
+(https://bmrb.io), both released under CC0 1.0. Both are gratefully
+acknowledged; see DATA_PROVENANCE.md.
+
+Full licence text: https://creativecommons.org/licenses/by/4.0/legalcode

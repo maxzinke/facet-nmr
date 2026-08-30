@@ -1,0 +1,92 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Readers, writers, validation and the asset manifest. Needs no model weights:
+  # tests marked `needs_assets` skip themselves when the files are absent
+  # (tests/conftest.py), and FACET_NO_DOWNLOAD guarantees nothing is fetched.
+  test:
+    name: test (py${{ matrix.python }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ["3.10", "3.11", "3.12"]
+    env:
+      FACET_NO_DOWNLOAD: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: false   # the weights are not needed here; see the assets job
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+
+      - name: Install CPU torch (keeps the runner download small)
+        run: python -m pip install --upgrade pip && python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Install package and tooling
+        run: python -m pip install -e . pytest ruff build twine
+
+      - name: Crash-class lint
+        run: ruff check facet --select F821,E9
+
+      - name: Tests (no assets)
+        run: python -m pytest -q -rs
+
+      - name: Build and check the distribution
+        run: |
+          python -m build
+          python -m twine check dist/*
+
+  # One cell that fetches the published weights and runs the end-to-end tests.
+  #
+  # NOTE: the HuggingFace weights repository (SiXa18/facet-weights) is PRIVATE at
+  # the time of writing, so `python -m facet.assets` cannot download anything from
+  # a runner and this job fails. It is marked continue-on-error so it does not
+  # block the required matrix above. Remove `continue-on-error` once the weights
+  # repo is public — from then on a failure here is a real regression.
+  assets:
+    name: end-to-end (py3.11, ubuntu, downloaded assets)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install CPU torch
+        run: python -m pip install --upgrade pip && python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Install package
+        run: python -m pip install -e . pytest
+
+      # Keyed on the manifest so a new pinned revision / hash invalidates the cache.
+      - name: Cache downloaded assets
+        uses: actions/cache@v4
+        with:
+          path: ~/.facet
+          key: facet-assets-${{ hashFiles('facet/assets.py') }}
+
+      - name: Fetch assets
+        run: python -m facet.assets
+
+      - name: End-to-end tests
+        run: python -m pytest -q -rs -m needs_assets

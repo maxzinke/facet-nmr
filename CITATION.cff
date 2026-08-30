@@ -1,0 +1,34 @@
+cff-version: 1.2.0
+message: "If you use FACET, please cite it using the metadata in this file."
+type: software
+title: "FACET: backbone torsion angle prediction from NMR chemical shifts"
+abstract: >-
+  FACET predicts protein backbone phi/psi torsion angles, secondary structure,
+  chi1 rotamers and per-residue Ramachandran basin populations from backbone
+  NMR chemical shifts, using a local-biased transformer with retrieval over a
+  220K-residue reference index. Outputs include XPLOR/CNS, CYANA and NEF
+  dihedral restraints.
+authors:
+  - family-names: Zinke
+    given-names: Maximilian
+    email: maximilian.zinke@gmail.com
+version: 0.4.0
+date-released: "2026-08-30"
+license: MIT
+repository-code: "https://github.com/maxzinke/facet-nmr"
+url: "https://huggingface.co/spaces/SiXa18/facet"
+keywords:
+  - NMR
+  - chemical shifts
+  - torsion angles
+  - dihedral restraints
+  - protein structure
+  - secondary structure
+# identifiers:
+#   - type: doi
+#     value: 10.5281/zenodo.XXXXXXX   # concept DOI, filled in after the first Zenodo release
+# preferred-citation:                  # filled in once the preprint is posted
+#   type: article
+#   title: ...
+#   authors: ...
+#   doi: ...

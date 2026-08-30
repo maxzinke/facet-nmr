@@ -37,7 +37,7 @@ from facet.assets import ASSETS, HF_REPO, HF_REVISION  # noqa: E402
 WEIGHTS_DIR = REPO_ROOT / "facet" / "weights"
 
 README = f"""---
-license: cc0-1.0
+license: cc-by-4.0
 tags:
   - protein-nmr
   - chemical-shifts
@@ -46,7 +46,7 @@ tags:
 
 # FACET model weights
 
-Model parameters and reference data for [FACET](https://github.com/bluegems661/facet-nmr),
+Model parameters and reference data for [FACET](https://github.com/maxzinke/facet-nmr),
 which predicts protein backbone phi/psi torsion angles from NMR chemical shifts.
 
 These files are **downloaded automatically on first use** — you do not need to fetch
@@ -70,10 +70,21 @@ a new package release.
 
 ## Provenance and licence
 
+These files are licensed **CC BY 4.0**: use them for anything, including commercially,
+provided you credit the project (see `CITATION.cff` in the source repository).
+
 Structural data (phi/psi, secondary structure) come from the **Protein Data Bank** and
 chemical-shift data from the **BMRB** — both released under **CC0 1.0**, a
 public-domain dedication with no conditions. Trained parameters are the work of this
 project. See `DATA_PROVENANCE.md` in the source repository.
+
+No deposition from the 745-entry benchmark test set is present in the retrieval index
+or the shift reference (`benchmarks/check_leakage.py` in the source repository).
+
+## Citation
+
+Zinke, M. *FACET: backbone torsion angle prediction from NMR chemical shifts* (2026).
+Software: <https://github.com/maxzinke/facet-nmr> — DOI to be added on release.
 
 Citing BMRB is appreciated:
 Hoch *et al.*, *Nucleic Acids Research* **51**, D368 (2023), doi:10.1093/nar/gkac1050.

@@ -1,0 +1,41 @@
+{
+  "title": "FACET: backbone torsion angle prediction from NMR chemical shifts",
+  "description": "<p>FACET predicts protein backbone phi/psi torsion angles, secondary structure, chi1 rotamers and per-residue Ramachandran basin populations from backbone NMR chemical shifts (H, HA, N, CA, CB, C). A 1.29M-parameter local-biased transformer produces per-residue embeddings; phi/psi are inferred by kNN + DBSCAN retrieval over a 220K-residue reference index, with a mask-aware fallback for residues with missing shifts. Outputs include XPLOR/CNS, CYANA and NEF dihedral restraints. On a leak-safe 745-protein benchmark (53,841 residues predicted by both methods) FACET reaches a 12.65&deg; median error versus 13.57&deg; for TALOS-N.</p><p>Model weights and reference data are archived separately at https://huggingface.co/SiXa18/facet-weights.</p>",
+  "creators": [
+    {
+      "name": "Zinke, Maximilian"
+    }
+  ],
+  "license": "MIT",
+  "upload_type": "software",
+  "access_right": "open",
+  "keywords": [
+    "NMR",
+    "chemical shifts",
+    "torsion angles",
+    "dihedral restraints",
+    "protein structure",
+    "secondary structure",
+    "deep learning"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "https://github.com/maxzinke/facet-nmr",
+      "relation": "isSupplementTo",
+      "resource_type": "software",
+      "scheme": "url"
+    },
+    {
+      "identifier": "https://huggingface.co/SiXa18/facet-weights",
+      "relation": "requires",
+      "resource_type": "dataset",
+      "scheme": "url"
+    },
+    {
+      "identifier": "https://huggingface.co/spaces/SiXa18/facet",
+      "relation": "isSupplementedBy",
+      "resource_type": "software",
+      "scheme": "url"
+    }
+  ]
+}

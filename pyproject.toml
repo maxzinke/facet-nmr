@@ -4,20 +4,25 @@ build-backend = "hatchling.build"
 
 [project]
 name = "facet-nmr"
-version = "0.3.1"
+version = "0.4.0"
 description = "Retrieval-augmented prediction of backbone torsion angles, secondary structure, and Ramachandran basin populations from NMR chemical shifts"
 readme = "README.md"
 license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.10"
 authors = [
-    { name = "Maxim" },
+    { name = "Maximilian Zinke", email = "maximilian.zinke@gmail.com" },
 ]
-keywords = ["NMR", "torsion angles", "protein", "backbone", "chemical shifts", "TALOS", "Ramachandran"]
+keywords = ["NMR", "torsion angles", "protein", "backbone", "chemical shifts", "dihedral restraints", "Ramachandran", "secondary structure"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Topic :: Scientific/Engineering :: Chemistry",
 ]
@@ -39,13 +44,25 @@ plot = [
 all = [
     "facet-nmr[onnx,bmrb,plot]",
 ]
+dev = [
+    "facet-nmr[all]",
+    "pytest>=7",
+    "ruff>=0.4",
+    "build",
+    "twine",
+]
 
 [project.scripts]
 facet = "facet.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/bluegems661/facet-nmr"
-Documentation = "https://github.com/bluegems661/facet-nmr#readme"
+Homepage = "https://github.com/maxzinke/facet-nmr"
+Documentation = "https://github.com/maxzinke/facet-nmr/tree/main/docs"
+Repository = "https://github.com/maxzinke/facet-nmr"
+Issues = "https://github.com/maxzinke/facet-nmr/issues"
+Changelog = "https://github.com/maxzinke/facet-nmr/blob/main/CHANGELOG.md"
+"Web app" = "https://huggingface.co/spaces/SiXa18/facet"
+"Model weights" = "https://huggingface.co/SiXa18/facet-weights"
 
 [tool.hatch.build.targets.wheel]
 packages = ["facet"]
@@ -66,3 +83,10 @@ exclude = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+  "needs_assets: requires the downloaded model weights / retrieval index",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"

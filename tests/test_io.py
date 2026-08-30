@@ -243,12 +243,26 @@ class TestWriters:
         out = write_tbl(result, tmp_path / "test.tbl", accepted_only=True)
         text = out.read_text()
         assert "assign" in text
-        # 2 accepted residues (Strong + Good). Both must emit at least one
-        # dihedral. N-terminal PHI and C-terminal PSI may be skipped when
-        # the neighbor isn't in the residue list — that's correct behavior.
+        # Default gating writes High-tier residues only: that is GLN (resid 2).
+        # N-terminal PHI and C-terminal PSI may be skipped when the neighbour
+        # isn't in the residue list — that's correct behaviour.
         assert "PHI" in text or "PSI" in text
-        # Residue 1 (MET) has no i-1 → PHI skipped
+        assert "2 GLN (High)" in text
+        # Medium (MET) and Low (GLY) must not be written by default.
+        assert "1 MET" not in text
+        assert "3 GLY" not in text
+        # Residue 1 has no i-1, so no restraint may reference resid 0.
         assert "(resid 0 and name C)" not in text
+
+    def test_tbl_include_medium(self, tmp_path):
+        result = _sample_result()
+        out = write_tbl(result, tmp_path / "test.tbl", accepted_only=True,
+                        include_medium=True)
+        text = out.read_text()
+        # MET (Medium) now contributes; GLY (Low) still excluded.
+        assert "1 MET (Medium)" in text
+        assert "2 GLN (High)" in text
+        assert "3 GLY" not in text
 
     def test_aco(self, tmp_path):
         result = _sample_result()
@@ -257,8 +271,27 @@ class TestWriters:
         assert "PHI" in text
         assert "CYANA" not in text  # should not contain program name in the body
         lines = [l for l in text.splitlines() if l.strip() and not l.startswith("#")]
-        # 2 accepted residues × 2 angles = 4 lines
+        # Default gating: High tier only → 1 residue (GLN) × 2 angles = 2 lines
+        assert len(lines) == 2
+        assert all(l.split()[0] == "2" for l in lines), lines
+
+    def test_aco_include_medium(self, tmp_path):
+        result = _sample_result()
+        out = write_aco(result, tmp_path / "test.aco", accepted_only=True,
+                        include_medium=True)
+        lines = [l for l in out.read_text().splitlines()
+                 if l.strip() and not l.startswith("#")]
+        # High + Medium → 2 residues × 2 angles = 4 lines; Low (GLY) excluded
         assert len(lines) == 4
+        assert {l.split()[0] for l in lines} == {"1", "2"}
+
+    def test_aco_include_all(self, tmp_path):
+        result = _sample_result()
+        out = write_aco(result, tmp_path / "test.aco", accepted_only=False)
+        lines = [l for l in out.read_text().splitlines()
+                 if l.strip() and not l.startswith("#")]
+        # accepted_only=False writes every residue regardless of tier
+        assert len(lines) == 6
 
     def test_nef(self, tmp_path):
         result = _sample_result()
@@ -300,11 +333,18 @@ class TestWriters:
 
 class TestFACETResult:
     def test_accepted(self):
+        """Default restraint set is High tier only (README: only High written)."""
         result = _sample_result()
         accepted = result.accepted()
-        assert len(accepted) == 2  # Strong + Good
-        classes = {r.confidence_class for r in accepted}
-        assert "Low" not in classes
+        assert [r.comp_id for r in accepted] == ["GLN"]
+        assert {r.confidence_class for r in accepted} == {"High"}
+
+    def test_accepted_include_medium(self):
+        """--include-medium adds the Medium tier; Low is never accepted."""
+        result = _sample_result()
+        accepted = result.accepted(include_medium=True)
+        assert [r.comp_id for r in accepted] == ["MET", "GLN"]
+        assert "Low" not in {r.confidence_class for r in accepted}
 
     def test_summary(self):
         result = _sample_result()

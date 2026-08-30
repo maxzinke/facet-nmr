@@ -69,10 +69,40 @@ class TestHardening:
 
 
 class TestValidation:
-    """Input validation in predict() — non-canonical AAs, missing heavy atoms."""
+    """Input validation in predict() — non-canonical AAs, missing heavy atoms.
 
-    def test_noncanonical_aas_rejected(self):
-        """Synthetic peptide with xeno AAs should raise ValueError."""
+    Contract for non-canonical residues (since v0.2.2, commit 154bc49): they are
+    skipped with a warning and prediction proceeds on the standard residues.
+    A ValueError is raised only when fewer than the minimum number of standard
+    residues remain after skipping.
+    """
+
+    def test_noncanonical_aas_skipped_with_warning(self, caplog):
+        """Xeno AAs are dropped and logged; validation then passes."""
+        from facet import predict
+        from facet.io.formats import Residue, ShiftList
+
+        residues = [
+            Residue(i + 1, "ALA", {"H": 8.0, "HA": 4.0, "N": 120.0,
+                                   "CA": 52.5, "CB": 19.1, "C": 177.8})
+            for i in range(5)
+        ]
+        residues.append(Residue(6, "MSE", {"H": 8.0, "HA": 4.0, "N": 120.0, "CA": 55.0}))
+        sl = ShiftList(residues=residues)
+
+        # Validation passes, so predict() gets as far as loading the checkpoint.
+        # A deliberately missing checkpoint proves we got past the AA check
+        # without loading the real model.
+        with caplog.at_level("WARNING", logger="facet"):
+            with pytest.raises(FileNotFoundError):
+                predict(sl, checkpoint="does-not-exist.pt")
+
+        warnings = [r.getMessage() for r in caplog.records if r.levelname == "WARNING"]
+        assert any("non-canonical" in w and "MSE" in w for w in warnings), warnings
+        assert any("predicting on the 5 standard residues" in w for w in warnings), warnings
+
+    def test_all_noncanonical_raises(self, caplog):
+        """When nothing standard remains, predict() raises before model load."""
         from facet import predict
         from facet.io.formats import Residue, ShiftList
 
@@ -82,9 +112,10 @@ class TestValidation:
             Residue(3, "7C9", {"H": 8.2, "HA": 4.2, "N": 122.0, "CA": 57.0}),
         ]
         sl = ShiftList(residues=residues)
-        # Should raise before even loading the model (no checkpoint arg needed)
-        with pytest.raises(ValueError, match="non-canonical amino acids"):
-            predict(sl, checkpoint="does-not-exist.pt")
+        with caplog.at_level("WARNING", logger="facet"):
+            with pytest.raises(ValueError, match="fewer than FACET's minimum"):
+                predict(sl, checkpoint="does-not-exist.pt")
+        assert any("non-canonical" in r.getMessage() for r in caplog.records)
 
     def test_proton_only_rejected(self):
         """Dataset with only H/HA observed should raise ValueError."""
@@ -118,3 +149,35 @@ class TestShiftList:
         sl = ShiftList(residues=[])
         shifts, masks, comp_ids, seq_ids = sl.to_arrays()
         assert shifts.shape == (0, 6)
+
+
+@pytest.mark.needs_assets
+class TestEndToEnd:
+    """Runs the real model + retrieval index on the bundled ubiquitin example.
+
+    Skipped automatically when the assets are not on disk (see conftest.py).
+    """
+
+    def test_ubiquitin_example(self):
+        from pathlib import Path
+
+        from facet import predict
+        from facet.io.formats import CONF_HIGH, CONF_MEDIUM
+
+        example = Path(__file__).resolve().parents[1] / "examples" / "ubiquitin.tab"
+        result = predict(example)
+
+        assert len(result.residues) == 10
+        tiers = {"High", "Medium", "Low", "Flexible"}
+        for r in result.residues:
+            assert r.confidence_class in tiers, r.confidence_class
+            assert -180.0 <= r.phi <= 180.0
+            assert -180.0 <= r.psi <= 180.0
+            assert r.ss in {"H", "E", "C"}
+
+        # Restraint gating follows the documented rule.
+        assert {r.confidence_class for r in result.accepted()} <= {CONF_HIGH}
+        assert {r.confidence_class for r in result.accepted(include_medium=True)} \
+            <= {CONF_HIGH, CONF_MEDIUM}
+        # Retrieval mode was actually used (index present), so basins are populated.
+        assert any(r.basin_populations is not None for r in result.residues)

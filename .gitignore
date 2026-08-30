@@ -1,10 +1,23 @@
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
 *.egg-info/
 dist/
 build/
 .eggs/
-*.onnx
-*.pt
-!facet/weights/*.pt
-!facet/weights/*.onnx
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Large assets: never in the repository. They are published to the HuggingFace
+# model repo and fetched by facet/assets.py; `python -m facet.assets` populates
+# ~/.facet for development. Keep .gitattributes so an accidental add goes to LFS.
+facet/weights/
+.facet/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

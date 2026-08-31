@@ -16,8 +16,29 @@ benchmark sets see [benchmarks/](benchmarks/).
 
 Sizes and SHA-256 of the downloadable files are pinned in `facet/assets.py`; a
 downloaded file that does not match is rejected. The HuggingFace repository is
-addressed by tag (`v0.4.0`), so a later upload cannot change what an installed copy
-resolves.
+addressed by tag (`v0.4.0`, commit `a359356`), so a later upload cannot change what an
+installed copy resolves.
+
+## Citing the weights
+
+The model repository is archived with its own DOI:
+[10.57967/hf/10248](https://doi.org/10.57967/hf/10248).
+
+```bibtex
+@misc{zinke_facet_weights_2026,
+  author    = {Zinke, Maximilian},
+  title     = {facet-weights},
+  year      = {2026},
+  publisher = {Hugging Face},
+  doi       = {10.57967/hf/10248},
+  url       = {https://huggingface.co/SiXa18/facet-weights}
+}
+```
+
+That DOI is registered against repository revision `d35fe56` (branch `main`), which
+carries byte-identical weight files to the pinned tag `v0.4.0` — the two revisions
+differ only in the model card. Cite the software itself with the Zenodo concept DOI in
+[CITATION.cff](CITATION.cff).
 
 ## Upstream sources
 

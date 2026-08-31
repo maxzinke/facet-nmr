@@ -12,6 +12,7 @@ authors:
   - family-names: Zinke
     given-names: Maximilian
     email: maximilian.zinke@gmail.com
+    orcid: "https://orcid.org/0000-0002-0541-5139"
 version: 0.4.0
 date-released: "2026-08-30"
 license: MIT

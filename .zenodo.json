@@ -3,7 +3,8 @@
   "description": "<p>FACET predicts protein backbone phi/psi torsion angles, secondary structure, chi1 rotamers and per-residue Ramachandran basin populations from backbone NMR chemical shifts (H, HA, N, CA, CB, C). A 1.29M-parameter local-biased transformer produces per-residue embeddings; phi/psi are inferred by kNN + DBSCAN retrieval over a 250K-residue reference index. Outputs include XPLOR/CNS, CYANA and NEF dihedral restraints. On a leak-safe 745-protein benchmark (54,260 residues predicted by both methods, corrected ground truth) FACET reaches a 10.91&deg; median error versus 11.58&deg; for TALOS-N (&minus;0.67&deg;, 95% CI [&minus;0.78, &minus;0.56]).</p><p>Model weights and reference data are archived separately at https://huggingface.co/SiXa18/facet-weights.</p>",
   "creators": [
     {
-      "name": "Zinke, Maximilian"
+      "name": "Zinke, Maximilian",
+      "orcid": "0000-0002-0541-5139"
     }
   ],
   "license": "MIT",

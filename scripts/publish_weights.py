@@ -83,7 +83,8 @@ or the shift reference (`benchmarks/check_leakage.py` in the source repository).
 
 ## Citation
 
-Zinke, M. *FACET: backbone torsion angle prediction from NMR chemical shifts* (2026).
+Zinke, M. ([ORCID 0000-0002-0541-5139](https://orcid.org/0000-0002-0541-5139)).
+*FACET: backbone torsion angle prediction from NMR chemical shifts* (2026).
 Software: <https://github.com/maxzinke/facet-nmr> — DOI [10.5281/zenodo.22190034](https://doi.org/10.5281/zenodo.22190034).
 
 Citing BMRB is appreciated:

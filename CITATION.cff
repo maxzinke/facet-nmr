@@ -24,9 +24,13 @@ keywords:
   - dihedral restraints
   - protein structure
   - secondary structure
-# identifiers:
-#   - type: doi
-#     value: 10.5281/zenodo.XXXXXXX   # concept DOI, filled in after the first Zenodo release
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.22190034
+    description: Zenodo concept DOI (all archived versions)
+  - type: doi
+    value: 10.5281/zenodo.22190035
+    description: Zenodo DOI for version 0.4.0
 # preferred-citation:                  # filled in once the preprint is posted
 #   type: article
 #   title: ...

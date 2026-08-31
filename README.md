@@ -3,7 +3,7 @@
 [![CI](https://github.com/maxzinke/facet-nmr/actions/workflows/ci.yml/badge.svg)](https://github.com/maxzinke/facet-nmr/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/facet-nmr.svg)](https://pypi.org/project/facet-nmr/)
 [![Try it](https://img.shields.io/badge/HuggingFace-Space-yellow)](https://huggingface.co/spaces/SiXa18/facet)
-<!-- [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.XXXXXXX.svg)](https://doi.org/10.5281/zenodo.XXXXXXX) -->
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22190034.svg)](https://doi.org/10.5281/zenodo.22190034)
 
 **FACET** (Fold And Conformation Estimation Tool) predicts per-residue backbone
 **φ/ψ torsion angles** with a confidence tier, **secondary structure**, **χ1
@@ -163,8 +163,10 @@ Software, version 0.4.0 (2026). https://github.com/maxzinke/facet-nmr
 ```
 
 A machine-readable citation is in [CITATION.cff](CITATION.cff) (GitHub's "Cite this
-repository" button). The archived-release DOI and the preprint reference will be
-added there on release.
+repository" button). Archived releases: concept DOI
+[10.5281/zenodo.22190034](https://doi.org/10.5281/zenodo.22190034) (all versions); this release:
+[10.5281/zenodo.22190035](https://doi.org/10.5281/zenodo.22190035). A preprint reference will be added
+when it is posted.
 
 FACET builds on published methods; if you use the corresponding outputs, cite them
 too:
